@@ -77,4 +77,4 @@ Pengembangan dibantu **GitHub Copilot (Copilot SDK in VS Code)**. Perubahan berb
 
 ## File Klien Lama yang Dimodifikasi
 
-Perubahan lama yang menyambungkan fitur kompetisi tetap dibatasi dan flag-gated: `.env.example` (nama flag/TTL), `bootstrap/app.php` (route/middleware kondisional), `config/competition.php` (flag, bobot, dan ambang), dan `app/Providers/AppServiceProvider.php` (registrasi command). `README.md` dan dokumen disclosure diperbarui untuk dokumentasi. Controller, `routes/web.php`, dan view presensi klien tidak diubah.
+Dibandingkan branch klien `face-recognition`, file klien lama yang dimodifikasi adalah `.env.example` (nama flag/TTL), `bootstrap/app.php` (route/middleware kondisional), dan `app/Providers/AppServiceProvider.php` (registrasi command). `README.md` klien yang sudah ada diganti dengan README kompetisi; salinan aslinya dipertahankan di `docs/README.client.md`. `config/competition.php` adalah file kompetisi baru dari Phase 1 yang diperluas di Phase 3a, bukan file klien lama. Controller, `routes/web.php`, dan view presensi klien tidak diubah.
