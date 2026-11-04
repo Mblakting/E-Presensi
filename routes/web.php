@@ -9,6 +9,7 @@ use App\Http\Controllers\JurusanController;
 use App\Http\Controllers\FaceRecognitionController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\StudentImportController;
+use App\Http\Controllers\BatchFaceController;
 
 // ─── Guest: Siswa ─────────────────────────────────────────────────────────────
 Route::middleware('guest:siswa')->group(function () {
@@ -77,6 +78,11 @@ Route::middleware('auth:user')->group(function () {
     // Import CSV Siswa
     Route::get('/siswa/import', [StudentImportController::class, 'index'])->name('siswa.import.form');
     Route::post('/siswa/import', [StudentImportController::class, 'import'])->name('siswa.import');
+
+    // Batch Face ID Generator
+    Route::get('/siswa/batch-face', [BatchFaceController::class, 'index'])->name('batch.face.index');
+    Route::post('/siswa/batch-face/extract', [BatchFaceController::class, 'extractZip'])->name('batch.face.extract');
+    Route::post('/siswa/batch-face/cleanup', [BatchFaceController::class, 'cleanup'])->name('batch.face.cleanup');
 
     // Manajemen Jurusan
     Route::get('/jurusan', [JurusanController::class, 'index'])->name('jurusan.index');
