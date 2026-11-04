@@ -3,9 +3,7 @@
 namespace Tests\Feature;
 
 use App\Competition\Models\TrustScore;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class TrustScorePurgeCommandTest extends TestCase
@@ -14,6 +12,8 @@ class TrustScorePurgeCommandTest extends TestCase
     {
         parent::setUp();
 
+        $auditMigration = require base_path('database/migrations/2026_digifest_002_create_competition_audit_logs_table.php');
+        $auditMigration->up();
         $migration = require base_path('database/migrations/2026_digifest_001_create_competition_trust_scores_table.php');
         $migration->up();
     }
@@ -40,6 +40,22 @@ class TrustScorePurgeCommandTest extends TestCase
             ->assertExitCode(0);
 
         $this->assertSame(1, TrustScore::query()->count());
+        $this->assertDatabaseHas('competition_audit_logs', ['event_type' => 'trust_scores_purged']);
+    }
+
+    public function test_empty_purge_is_still_audited(): void
+    {
+        $this->artisan('competition:purge-trust-scores', ['--days' => 90])
+            ->expectsOutputToContain('Deleted 0 trust score(s)')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseHas('competition_audit_logs', [
+            'event_type' => 'trust_scores_purged',
+            'payload_hash' => hash('sha256', json_encode([
+                'deleted' => 0,
+                'retention_days' => 90,
+            ])),
+        ]);
     }
 
     public function test_command_rejects_non_positive_retention_days(): void

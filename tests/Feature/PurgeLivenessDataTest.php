@@ -55,7 +55,7 @@ class PurgeLivenessDataTest extends TestCase
         }
 
         $this->artisan('competition:purge-liveness-data', ['--days' => 90, '--dry-run' => true])
-            ->expectsOutputToContain('1 challenge(s), 1 review item(s), and 1 related audit event(s)')
+            ->expectsOutputToContain('1 challenge(s), 1 review item(s), 1 audit event(s)')
             ->assertExitCode(0);
         $this->assertDatabaseCount('competition_liveness_challenges', 2);
 
@@ -63,6 +63,7 @@ class PurgeLivenessDataTest extends TestCase
             ->assertExitCode(0);
         $this->assertDatabaseCount('competition_liveness_challenges', 1);
         $this->assertDatabaseCount('competition_verification_queue', 1);
-        $this->assertDatabaseCount('competition_audit_logs', 1);
+        $this->assertDatabaseCount('competition_audit_logs', 2);
+        $this->assertDatabaseHas('competition_audit_logs', ['event_type' => 'competition_data_purged']);
     }
 }

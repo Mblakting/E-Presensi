@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
             if (config('competition.ai_evaluation_dashboard', false)) {
                 require app_path('Competition/Routes/evaluation.php');
             }
+            if (config('competition.audit_viewer', false)) {
+                require app_path('Competition/Routes/audit.php');
+            }
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

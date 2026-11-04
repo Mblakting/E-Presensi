@@ -41,6 +41,7 @@ class CompetitionEvaluationTest extends TestCase
         });
 
         foreach ([
+            '2026_digifest_002_create_competition_audit_logs_table.php',
             '2026_digifest_003_create_competition_liveness_challenges_table.php',
             '2026_digifest_006_create_competition_evaluation_trials_table.php',
         ] as $migrationFile) {
@@ -55,6 +56,11 @@ class CompetitionEvaluationTest extends TestCase
 
     public function test_dashboard_has_an_honest_empty_state_and_rejects_student_guard(): void
     {
+        $this->assertSame(
+            ['GET', 'HEAD'],
+            Route::getRoutes()->getByName('competition.evaluation.index')->methods()
+        );
+
         $this->actingAs($this->createAdmin(), 'user');
         $this->get(route('competition.evaluation.index'))
             ->assertOk()
@@ -62,6 +68,10 @@ class CompetitionEvaluationTest extends TestCase
             ->assertSee('Belum ada percobaan uji manual')
             ->assertSee('Tidak ada angka FAR, FRR')
             ->assertSee('—');
+        $this->assertDatabaseHas('competition_audit_logs', [
+            'event_type' => 'evaluation_dashboard_accessed',
+            'actor_type' => 'admin',
+        ]);
 
         $student = Siswa::query()->create([
             'nisn' => '9999000001',
@@ -108,6 +118,10 @@ class CompetitionEvaluationTest extends TestCase
         $validCsv = $this->writeCsv([
             ['genuine', 'accepted', 'challenge_lulus', 'T1', '2026-11-01', 'instruksi selesai'],
         ]);
+        $duplicateCsv = $this->writeCsv([
+            ['print', 'rejected', 'foto_cetak_ditolak', 'T2', '2026-11-02', ''],
+            ['print', 'rejected', 'foto_cetak_ditolak', 'T2', '2026-11-02', ''],
+        ]);
         $invalidCsv = $this->writeCsv([
             ['print', 'accepted', 'foto diterima', 'Nama Penguji', '2026-11-01', ''],
             ['screen', 'accepted', 'email tester@example.invalid', 'T2', '2026-11-01', ''],
@@ -120,12 +134,35 @@ class CompetitionEvaluationTest extends TestCase
             $this->assertSame(1, EvaluationTrial::query()->count());
             $this->assertStringContainsString('1 exact duplicate row(s) skipped', Artisan::output());
 
+            $this->assertSame(0, Artisan::call('competition:import-evaluation-trials', ['file' => $duplicateCsv]));
+            $this->assertSame(2, EvaluationTrial::query()->count());
+            $this->assertStringContainsString('1 exact duplicate row(s) skipped', Artisan::output());
+            $this->assertDatabaseHas('competition_audit_logs', [
+                'event_type' => 'evaluation_trials_imported',
+            ]);
+
             $this->assertSame(1, Artisan::call('competition:import-evaluation-trials', ['file' => $invalidCsv]));
-            $this->assertSame(1, EvaluationTrial::query()->count());
+            $this->assertSame(2, EvaluationTrial::query()->count());
             $this->assertStringContainsString('No rows were imported', Artisan::output());
             $this->assertStringNotContainsString('tester@example.invalid', Artisan::output());
+            $this->assertDatabaseHas('competition_audit_logs', [
+                'event_type' => 'evaluation_trials_import_rejected',
+                'payload_hash' => hash('sha256', json_encode([
+                    'reason_code' => 'invalid_rows',
+                    'invalid_rows' => 2,
+                ])),
+            ]);
+
+            $missingPath = $validCsv.'-missing';
+            $this->assertSame(1, Artisan::call('competition:import-evaluation-trials', ['file' => $missingPath]));
+            $this->assertDatabaseHas('competition_audit_logs', [
+                'event_type' => 'evaluation_trials_import_rejected',
+                'payload_hash' => hash('sha256', json_encode(['reason_code' => 'file_unavailable'])),
+            ]);
+            $this->assertStringNotContainsString($missingPath, Artisan::output());
         } finally {
             @unlink($validCsv);
+            @unlink($duplicateCsv);
             @unlink($invalidCsv);
         }
     }
@@ -150,6 +187,7 @@ class CompetitionEvaluationTest extends TestCase
             $this->assertStringNotContainsString('name', strtolower($csv));
             $this->assertStringNotContainsString('descriptor', strtolower($csv));
             $this->assertStringNotContainsString('NISN', $csv);
+            $this->assertDatabaseCount('competition_audit_logs', 2);
         } finally {
             foreach (['manual_trials.csv', 'METHODOLOGY.md'] as $name) {
                 $path = $directory.DIRECTORY_SEPARATOR.$name;

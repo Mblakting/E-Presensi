@@ -125,6 +125,10 @@ class CompetitionReviewQueueTest extends TestCase
             ->assertOk()
             ->assertSee('Antrean Verifikasi Presensi')
             ->assertSee('Skor sinyal berada pada rentang verifikasi admin.');
+        $this->assertDatabaseHas('competition_audit_logs', [
+            'event_type' => 'verification_queue_accessed',
+            'actor_id' => (string) $admin->id,
+        ]);
         $this->from(route('competition.reviews.index'))
             ->post(route('competition.reviews.decide', $itemId), ['decision' => 'suspicious'])
             ->assertRedirect(route('competition.reviews.index'));

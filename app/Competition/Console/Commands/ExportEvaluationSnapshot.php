@@ -2,6 +2,7 @@
 
 namespace App\Competition\Console\Commands;
 
+use App\Competition\Models\AuditLog;
 use App\Competition\Models\EvaluationTrial;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -76,6 +77,13 @@ class ExportEvaluationSnapshot extends Command
             return self::FAILURE;
         }
 
+        AuditLog::record(
+            'evaluation_snapshot_exported',
+            'system',
+            null,
+            null,
+            ['trial_count' => $trials->count()]
+        );
         $this->info('Exported '.$trials->count().' anonymized trial(s) to '.$directory.'.');
 
         return self::SUCCESS;

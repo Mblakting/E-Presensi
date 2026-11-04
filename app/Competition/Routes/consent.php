@@ -9,7 +9,7 @@ Route::middleware('web')->group(function (): void {
 
     Route::middleware('auth:user')->prefix('competition/consents')->name('competition.consents.')->group(function (): void {
         Route::get('/', [ConsentController::class, 'index'])->name('index');
-        Route::post('/{nisn}/grant', [ConsentController::class, 'grant'])->name('grant');
-        Route::post('/{nisn}/withdraw', [ConsentController::class, 'withdraw'])->name('withdraw');
+        Route::post('/grant', [ConsentController::class, 'grant'])->name('grant');
+        Route::post('/withdraw', [ConsentController::class, 'withdraw'])->name('withdraw');
     });
 });

@@ -69,6 +69,12 @@ Kontak pengelola: [isi kontak pengelola sebelum teks ini disetujui].
 Teks ini adalah DRAF untuk ditinjau pengguna dan bukan pernyataan bahwa persyaratan hukum telah dipenuhi. Untuk siswa di bawah umur, persetujuan harus mengikuti proses tertulis sekolah atau wali yang berwenang. Jangan gunakan untuk data nyata sebelum teks dan prosesnya ditinjau serta disetujui.
 CONSENT,
     ],
+    'retention' => [
+        'trust_scores_days' => env('COMPETITION_TRUST_SCORE_RETENTION_DAYS', 90),
+        'liveness_days' => env('COMPETITION_LIVENESS_RETENTION_DAYS', 90),
+        'audit_days' => env('COMPETITION_AUDIT_RETENTION_DAYS', 90),
+        'consent_history_days' => env('COMPETITION_CONSENT_HISTORY_RETENTION_DAYS', 365),
+    ],
 
     /*
      * Phase 4: Halaman AI Evaluation Dashboard (metrik FAR/FRR, audit log).
@@ -79,6 +85,7 @@ CONSENT,
         'small_sample_threshold' => 20,
     ],
     'audit_viewer' => env('FEATURE_COMPETITION_AUDIT_VIEWER', false),
+    'data_erasure' => env('FEATURE_COMPETITION_DATA_ERASURE', false),
 
     /*
      * Phase 5: Anomaly Detection — deteksi pola bolos/terlambat.

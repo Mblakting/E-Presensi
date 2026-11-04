@@ -21,7 +21,7 @@
     <div class="card mb-4">
         <div class="card-header">Catat persetujuan atau penarikan</div>
         <div class="card-body">
-            <form method="POST" action="{{ route('competition.consents.grant', ['nisn' => '__NISN__']) }}" id="grant-consent-form">
+            <form method="POST" action="{{ route('competition.consents.grant') }}">
                 @csrf
                 <div class="form-group">
                     <label for="grant-nisn">NISN</label>
@@ -40,7 +40,7 @@
                     <p class="text-danger mt-2 mb-0">Aksi dinonaktifkan sampai draf ditinjau dan teks disetujui melalui perubahan konfigurasi yang ditinjau.</p>
                 @endif
             </form>
-            <form method="POST" action="{{ route('competition.consents.withdraw', ['nisn' => '__NISN__']) }}" id="withdraw-consent-form" class="mt-3">
+            <form method="POST" action="{{ route('competition.consents.withdraw') }}" class="mt-3">
                 @csrf
                 <label for="withdraw-nisn">NISN untuk menarik persetujuan</label>
                 <div class="input-group">
@@ -74,16 +74,4 @@
         <div class="card-body">{{ $records->links() }}</div>
     </div>
 </div>
-<script>
-    document.getElementById('grant-consent-form').addEventListener('submit', function (event) {
-        event.preventDefault();
-        this.action = this.action.replace('__NISN__', encodeURIComponent(document.getElementById('grant-nisn').value));
-        this.submit();
-    });
-    document.getElementById('withdraw-consent-form').addEventListener('submit', function (event) {
-        event.preventDefault();
-        this.action = this.action.replace('__NISN__', encodeURIComponent(document.getElementById('withdraw-nisn').value));
-        this.submit();
-    });
-</script>
 @endsection

@@ -47,6 +47,24 @@ class ConsentService
             ->all();
     }
 
+    /**
+     * @return list<string>
+     */
+    public function allGrantedNisns(): array
+    {
+        $latestIds = ConsentRecord::query()
+            ->selectRaw('MAX(id)')
+            ->groupBy('siswa_nisn');
+
+        return ConsentRecord::query()
+            ->whereIn('id', $latestIds)
+            ->where('status', 'granted')
+            ->where('text_version', (string) config('competition.consent.version'))
+            ->where('text_hash', hash('sha256', (string) config('competition.consent.text')))
+            ->pluck('siswa_nisn')
+            ->all();
+    }
+
     public function record(
         string $nisn,
         string $status,

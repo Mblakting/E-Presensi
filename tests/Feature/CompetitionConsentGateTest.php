@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Competition\Http\ConsentGateMiddleware;
 use App\Competition\Services\ConsentService;
+use App\Http\Controllers\FaceRecognitionController;
 use App\Models\Siswa;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
@@ -54,8 +55,13 @@ class CompetitionConsentGateTest extends TestCase
             $table->time('jam_out')->nullable();
         });
 
-        $migration = require base_path('database/migrations/2026_digifest_005_create_competition_consents_table.php');
-        $migration->up();
+        foreach ([
+            '2026_digifest_002_create_competition_audit_logs_table.php',
+            '2026_digifest_005_create_competition_consents_table.php',
+        ] as $migrationFile) {
+            $migration = require base_path('database/migrations/'.$migrationFile);
+            $migration->up();
+        }
         require app_path('Competition/Routes/consent.php');
         require app_path('Competition/Routes/web.php');
         Route::getRoutes()->refreshNameLookups();
@@ -89,7 +95,8 @@ class CompetitionConsentGateTest extends TestCase
         $admin = $this->createAdmin();
         $this->actingAs($admin, 'user');
 
-        $this->post(route('competition.consents.grant', '9999000001'), [
+        $this->post(route('competition.consents.grant'), [
+            'nisn' => '9999000001',
             'authority_basis' => 'adult_volunteer',
             'authority_verified' => '1',
         ])->assertRedirect()->assertSessionHas('warning', 'Draf persetujuan belum ditinjau dan disetujui; persetujuan belum dapat dicatat.');
@@ -103,7 +110,8 @@ class CompetitionConsentGateTest extends TestCase
         $admin = $this->createAdmin();
         $this->actingAs($admin, 'user');
 
-        $this->post(route('competition.consents.grant', '9999000001'), [
+        $this->post(route('competition.consents.grant'), [
+            'nisn' => '9999000001',
             'authority_basis' => 'adult_volunteer',
             'authority_verified' => '1',
         ])->assertRedirect();
@@ -113,13 +121,18 @@ class CompetitionConsentGateTest extends TestCase
             'text_version' => 'draft-1',
             'text_hash' => hash('sha256', 'Teks uji persetujuan'),
         ]);
+        $this->assertDatabaseHas('competition_audit_logs', [
+            'event_type' => 'consent_granted',
+            'subject_nisn' => '9999000001',
+        ]);
 
         config([
             'competition.consent.version' => 'draft-2',
             'competition.consent.text' => 'Teks uji versi baru',
         ]);
         $this->assertFalse(app(ConsentService::class)->isGranted('9999000001'));
-        $this->post(route('competition.consents.grant', '9999000001'), [
+        $this->post(route('competition.consents.grant'), [
+            'nisn' => '9999000001',
             'authority_basis' => 'school_guardian_record',
             'authority_verified' => '1',
         ])->assertRedirect();
@@ -134,8 +147,9 @@ class CompetitionConsentGateTest extends TestCase
         ]);
         $this->assertTrue(app(ConsentService::class)->isGranted('9999000001'));
 
-        $this->post(route('competition.consents.withdraw', '9999000001'))->assertRedirect();
+        $this->post(route('competition.consents.withdraw'), ['nisn' => '9999000001'])->assertRedirect();
         $this->assertDatabaseCount('competition_consents', 3);
+        $this->assertDatabaseCount('competition_audit_logs', 3);
         $this->assertDatabaseHas('competition_consents', [
             'siswa_nisn' => '9999000001',
             'status' => 'withdrawn',
@@ -148,10 +162,13 @@ class CompetitionConsentGateTest extends TestCase
         $this->actingAs(Siswa::query()->findOrFail('9999000001'), 'siswa');
 
         $this->get(route('competition.consents.index'))->assertRedirect(route('loginadmin'));
-        $this->post(route('competition.consents.grant', '9999000001'), [
+        $this->post(route('competition.consents.grant'), [
+            'nisn' => '9999000001',
             'authority_basis' => 'adult_volunteer',
             'authority_verified' => '1',
         ])->assertRedirect(route('loginadmin'));
+        $this->post(route('competition.consents.withdraw'), ['nisn' => '9999000001'])
+            ->assertRedirect(route('loginadmin'));
 
         $this->assertDatabaseCount('competition_consents', 0);
     }
@@ -188,6 +205,9 @@ class CompetitionConsentGateTest extends TestCase
         DB::table('siswa')->where('nisn', '9999000002')->update([
             'face_descriptor' => json_encode(array_fill(0, 128, 0.2)),
         ]);
+        $this->mock(FaceRecognitionController::class, function ($mock): void {
+            $mock->shouldNotReceive('getDescriptors');
+        });
 
         $this->actingAs(Siswa::query()->findOrFail('9999000001'), 'siswa');
         $this->getJson(route('face.descriptors'))

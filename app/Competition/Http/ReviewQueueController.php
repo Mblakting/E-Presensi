@@ -14,6 +14,14 @@ class ReviewQueueController
 {
     public function index(): View
     {
+        AuditLog::record(
+            'verification_queue_accessed',
+            'admin',
+            (string) Auth::guard('user')->id(),
+            null,
+            ['page' => 'review_queue']
+        );
+
         $items = VerificationQueueItem::query()
             ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
             ->orderByDesc('created_at')

@@ -2,6 +2,7 @@
 
 namespace App\Competition\Console\Commands;
 
+use App\Competition\Models\AuditLog;
 use App\Competition\Models\EvaluationTrial;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -18,35 +19,30 @@ class ImportEvaluationTrials extends Command
     {
         $path = (string) $this->argument('file');
         if (! is_file($path) || ! is_readable($path)) {
-            $this->error('The CSV file does not exist or is not readable.');
-
-            return self::FAILURE;
+            return $this->rejectImport('file_unavailable', 'The CSV file does not exist or is not readable.');
         }
 
         $handle = fopen($path, 'rb');
         if ($handle === false) {
-            $this->error('The CSV file could not be opened.');
-
-            return self::FAILURE;
+            return $this->rejectImport('file_open_failed', 'The CSV file could not be opened.');
         }
 
         $headers = fgetcsv($handle, null, ',', '"', '');
         if (! is_array($headers)) {
             fclose($handle);
-            $this->error('The CSV file is empty or has no header row.');
 
-            return self::FAILURE;
+            return $this->rejectImport('missing_header', 'The CSV file is empty or has no header row.');
         }
         $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $headers[0]);
         if ($headers !== self::HEADERS) {
             fclose($handle);
-            $this->error('CSV headers must be exactly: '.implode(',', self::HEADERS));
 
-            return self::FAILURE;
+            return $this->rejectImport('invalid_headers', 'CSV headers must be exactly: '.implode(',', self::HEADERS));
         }
 
         $trials = [];
         $errors = [];
+        $validRowCount = 0;
         $line = 1;
         while (($values = fgetcsv($handle, null, ',', '"', '')) !== false) {
             $line++;
@@ -70,20 +66,26 @@ class ImportEvaluationTrials extends Command
                 continue;
             }
 
+            $validRowCount++;
+            if ($validRowCount > 10000) {
+                fclose($handle);
+
+                return $this->rejectImport('too_many_rows', 'A single CSV import is limited to 10,000 rows.', [
+                    'valid_rows' => $validRowCount,
+                ]);
+            }
+
             $trial['fingerprint'] = EvaluationTrial::fingerprintFor($trial);
             $trials[$trial['fingerprint']] = $trial;
         }
         fclose($handle);
 
         if ($errors !== []) {
-            $this->error('CSV validation failed on line(s): '.implode(', ', $errors).'. No rows were imported.');
-
-            return self::FAILURE;
-        }
-        if (count($trials) > 10000) {
-            $this->error('A single CSV import is limited to 10,000 rows.');
-
-            return self::FAILURE;
+            return $this->rejectImport(
+                'invalid_rows',
+                'CSV validation failed on line(s): '.implode(', ', $errors).'. No rows were imported.',
+                ['invalid_rows' => count($errors)]
+            );
         }
 
         $existing = collect(array_keys($trials))
@@ -96,17 +98,41 @@ class ImportEvaluationTrials extends Command
             ->reject(static fn (array $trial): bool => isset($existing[$trial['fingerprint']]))
             ->values()
             ->all();
+        $duplicateCount = $validRowCount - count($newTrials);
 
-        DB::transaction(function () use ($newTrials): void {
+        DB::transaction(function () use ($newTrials, $duplicateCount): void {
             foreach ($newTrials as $trial) {
                 EvaluationTrial::query()->create($trial);
             }
+            AuditLog::record(
+                'evaluation_trials_imported',
+                'system',
+                null,
+                null,
+                ['imported' => count($newTrials), 'duplicate_rows_skipped' => $duplicateCount]
+            );
         });
 
-        $duplicateCount = count($trials) - count($newTrials);
         $this->info('Imported '.count($newTrials).' trial(s); '.$duplicateCount.' exact duplicate row(s) skipped.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  array<string, int|string>  $metadata
+     */
+    private function rejectImport(string $reasonCode, string $message, array $metadata = []): int
+    {
+        AuditLog::record(
+            'evaluation_trials_import_rejected',
+            'system',
+            null,
+            null,
+            ['reason_code' => $reasonCode, ...$metadata]
+        );
+        $this->error($message);
+
+        return self::FAILURE;
     }
 
     /**

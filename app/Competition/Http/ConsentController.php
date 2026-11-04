@@ -2,6 +2,7 @@
 
 namespace App\Competition\Http;
 
+use App\Competition\Models\AuditLog;
 use App\Competition\Models\ConsentRecord;
 use App\Competition\Services\ConsentService;
 use Illuminate\Http\RedirectResponse;
@@ -32,17 +33,18 @@ class ConsentController
         ]);
     }
 
-    public function grant(Request $request, string $nisn, ConsentService $consents): RedirectResponse
+    public function grant(Request $request, ConsentService $consents): RedirectResponse
     {
         if (! (bool) config('competition.consent.text_approved', false)) {
             return back()->with('warning', 'Draf persetujuan belum ditinjau dan disetujui; persetujuan belum dapat dicatat.');
         }
 
         $validated = $request->validate([
+            'nisn' => ['required', 'string', 'exists:siswa,nisn'],
             'authority_basis' => ['required', 'in:adult_volunteer,school_guardian_record'],
             'authority_verified' => ['accepted'],
         ]);
-        abort_unless(DB::table('siswa')->where('nisn', $nisn)->exists(), 404, 'Siswa tidak ditemukan.');
+        $nisn = $validated['nisn'];
 
         $latest = $consents->latest($nisn);
         if ($latest?->status === 'granted'
@@ -51,21 +53,44 @@ class ConsentController
             return back()->with('status', 'Persetujuan masih aktif; tidak ada perubahan yang dicatat.');
         }
 
-        $consents->record($nisn, 'granted', $validated['authority_basis']);
+        DB::transaction(function () use ($consents, $nisn, $validated): void {
+            $record = $consents->record($nisn, 'granted', $validated['authority_basis']);
+            AuditLog::record(
+                'consent_granted',
+                'admin',
+                (string) auth('user')->id(),
+                $nisn,
+                ['consent_id' => $record->id, 'version' => $record->text_version, 'authority_basis' => $record->authority_basis],
+                str_starts_with($nisn, '9999')
+            );
+        });
 
         return back()->with('status', 'Persetujuan dicatat. Pastikan proses tertulis yang sesuai telah diverifikasi.');
     }
 
-    public function withdraw(string $nisn, ConsentService $consents): RedirectResponse
+    public function withdraw(Request $request, ConsentService $consents): RedirectResponse
     {
-        abort_unless(DB::table('siswa')->where('nisn', $nisn)->exists(), 404, 'Siswa tidak ditemukan.');
+        $validated = $request->validate([
+            'nisn' => ['required', 'string', 'exists:siswa,nisn'],
+        ]);
+        $nisn = $validated['nisn'];
 
         $latest = $consents->latest($nisn);
         if ($latest?->status !== 'granted') {
             return back()->with('status', 'Tidak ada persetujuan aktif untuk ditarik.');
         }
 
-        $consents->record($nisn, 'withdrawn');
+        DB::transaction(function () use ($consents, $nisn): void {
+            $record = $consents->record($nisn, 'withdrawn');
+            AuditLog::record(
+                'consent_withdrawn',
+                'admin',
+                (string) auth('user')->id(),
+                $nisn,
+                ['consent_id' => $record->id, 'version' => $record->text_version],
+                str_starts_with($nisn, '9999')
+            );
+        });
 
         return back()->with('status', 'Persetujuan ditarik. Pemrosesan wajah kompetisi untuk NISN ini dihentikan.');
     }

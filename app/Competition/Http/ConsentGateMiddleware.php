@@ -29,27 +29,11 @@ class ConsentGateMiddleware
                 return $this->denied($request, 'Persetujuan pemrosesan wajah belum aktif. Gunakan presensi non-wajah atau hubungi pengelola.');
             }
 
-            $response = $next($request);
-
-            if ($routeName === 'face.descriptors'
-                && str_contains((string) $response->headers->get('Content-Type'), 'application/json')) {
-                $payload = json_decode((string) $response->getContent(), true);
-                if (is_array($payload) && isset($payload['data']) && is_array($payload['data'])) {
-                    $nisns = array_values(array_filter(array_map(
-                        static fn (mixed $item): ?string => is_array($item) && isset($item['nisn']) ? (string) $item['nisn'] : null,
-                        $payload['data']
-                    )));
-                    $granted = array_fill_keys($this->consents->grantedNisns($nisns), true);
-                    $payload['data'] = array_values(array_filter(
-                        $payload['data'],
-                        static fn (mixed $item): bool => is_array($item)
-                            && isset($item['nisn'])
-                            && isset($granted[(string) $item['nisn']])
-                    ));
-
-                    return response()->json($payload, $response->getStatusCode(), $response->headers->all());
-                }
+            if ($routeName === 'face.descriptors') {
+                return $this->descriptorsResponse();
             }
+
+            $response = $next($request);
 
             return $response;
         }
@@ -85,6 +69,32 @@ class ConsentGateMiddleware
         }
 
         return $next($request);
+    }
+
+    private function descriptorsResponse(): JsonResponse
+    {
+        $grantedNisns = $this->consents->allGrantedNisns();
+        $siswas = DB::table('siswa')
+            ->select('nisn', 'nama_lengkap', 'kelas', 'foto', 'face_descriptor')
+            ->whereNotNull('face_descriptor')
+            ->whereIn('nisn', $grantedNisns)
+            ->get();
+
+        $data = $siswas->map(static function (object $siswa): array {
+            return [
+                'nisn' => $siswa->nisn,
+                'nama_lengkap' => $siswa->nama_lengkap,
+                'kelas' => $siswa->kelas,
+                'foto' => ! empty($siswa->foto)
+                    ? asset('storage/uploads/foto_siswa/'.$siswa->foto)
+                    : null,
+                'face_descriptor' => json_decode($siswa->face_descriptor, true),
+            ];
+        });
+
+        return new JsonResponse(['status' => 'success', 'data' => $data], 200, [
+            'Cache-Control' => 'no-store, private',
+        ]);
     }
 
     /**

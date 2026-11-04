@@ -12,6 +12,7 @@ use App\Competition\Console\Commands\PurgeTrustScores;
 use App\Competition\Console\Commands\PurgeLivenessData;
 use App\Competition\Console\Commands\ImportEvaluationTrials;
 use App\Competition\Console\Commands\ExportEvaluationSnapshot;
+use App\Competition\Console\Commands\EraseSyntheticCompetitionSubject;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
             PurgeLivenessData::class,
             ImportEvaluationTrials::class,
             ExportEvaluationSnapshot::class,
+            EraseSyntheticCompetitionSubject::class,
         ]);
 
         // [DIGIFEST 2026] Daftarkan event listener Trust Engine
