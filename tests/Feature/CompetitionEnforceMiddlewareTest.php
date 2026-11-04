@@ -224,39 +224,32 @@ class CompetitionEnforceMiddlewareTest extends TestCase
         $this->assertStringContainsString('liveness', strtolower($response->getData(true)['message']));
     }
 
-    public function test_review_item_is_created_only_after_successful_attendance_response(): void
+    public function test_review_verdict_is_held_without_calling_attendance_controller(): void
     {
-        DB::table('presensi')->insert([
-            'nisn' => self::NISN,
-            'tgl_presensi' => now()->toDateString(),
-            'jam_in' => '07:00:00',
-        ]);
-        $failedAttendanceChallenge = $this->issueChallenge();
-        $failedResponse = $this->middleware()->handle(
-            $this->attendanceRequest($this->unavailablePayload($failedAttendanceChallenge)),
-            fn (): JsonResponse => response()->json(['status' => 'error', 'message' => 'duplicate'], 409)
-        );
-        $this->assertSame(409, $failedResponse->getStatusCode());
-        $this->assertDatabaseCount('competition_verification_queue', 0);
-        DB::table('presensi')->where('nisn', self::NISN)->delete();
-
         $successfulChallenge = $this->issueChallenge();
+        $called = false;
         $successfulResponse = $this->middleware()->handle(
             $this->attendanceRequest($this->unavailablePayload($successfulChallenge)),
-            fn (): JsonResponse => response()->json(['status' => 'success', 'type' => 'out', 'message' => 'legacy'])
+            function () use (&$called): JsonResponse {
+                $called = true;
+
+                return response()->json(['status' => 'success', 'type' => 'in', 'message' => 'legacy']);
+            }
         );
 
+        $this->assertFalse($called);
+        $this->assertSame('success', $successfulResponse->getData(true)['status']);
         $this->assertSame('pending', $successfulResponse->getData(true)['verification_status']);
-        $this->assertSame('Presensi tercatat dan menunggu verifikasi admin.', $successfulResponse->getData(true)['message']);
-        $this->assertDatabaseCount('competition_verification_queue', 1);
-        $this->assertDatabaseHas('competition_verification_queue', [
+        $this->assertSame('Presensi memerlukan verifikasi manual admin. Mohon tunggu.', $successfulResponse->getData(true)['message']);
+        $this->assertDatabaseCount('presensi', 0);
+        $this->assertDatabaseCount('competition_verification_queue', 0);
+        $this->assertDatabaseHas('competition_manual_verifications', [
             'challenge_id' => LivenessChallenge::query()
                 ->where('nonce_hash', hash('sha256', $successfulChallenge['nonce']))
                 ->value('id'),
-            'absen_type' => 'out',
             'status' => 'pending',
         ]);
-        $this->assertDatabaseHas('competition_audit_logs', ['event_type' => 'verification_queued']);
+        $this->assertDatabaseHas('competition_audit_logs', ['event_type' => 'manual_verification_queued']);
     }
 
     public function test_unavailable_liveness_fallback_is_capped_per_student_per_day(): void
@@ -283,7 +276,7 @@ class CompetitionEnforceMiddlewareTest extends TestCase
             }
         );
 
-        $this->assertSame(1, $calls);
+        $this->assertSame(0, $calls);
         $this->assertSame(422, $response->getStatusCode());
         $this->assertSame('liveness_unavailable_daily_limit', $response->getData(true)['type']);
     }
@@ -354,9 +347,11 @@ class CompetitionEnforceMiddlewareTest extends TestCase
     private function runCompetitionMigrations(): void
     {
         foreach ([
+            '2026_digifest_001_create_competition_trust_scores_table.php',
             '2026_digifest_002_create_competition_audit_logs_table.php',
             '2026_digifest_003_create_competition_liveness_challenges_table.php',
             '2026_digifest_004_create_competition_verification_queue_table.php',
+            '2026_digifest_007_create_competition_manual_verifications_table.php',
         ] as $migrationFile) {
             $migration = require base_path('database/migrations/'.$migrationFile);
             $migration->up();
@@ -403,7 +398,7 @@ class CompetitionEnforceMiddlewareTest extends TestCase
             'nisn_match' => self::NISN,
             'confidence' => 0.2,
             'lokasi' => self::LOCATION,
-            'image' => 'data:image/jpeg;base64,'.base64_encode('synthetic-image'),
+            'image' => 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAf/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AN+AD//Z',
         ];
     }
 

@@ -6,6 +6,7 @@ use App\Competition\Models\AuditLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class EraseSyntheticCompetitionSubject extends Command
 {
@@ -20,6 +21,7 @@ class EraseSyntheticCompetitionSubject extends Command
      * @var array<string, string>
      */
     private const TABLES = [
+        'competition_manual_verifications' => 'siswa_nisn',
         'competition_trust_scores' => 'nisn',
         'competition_liveness_challenges' => 'siswa_nisn',
         'competition_verification_queue' => 'siswa_nisn',
@@ -59,8 +61,12 @@ class EraseSyntheticCompetitionSubject extends Command
         }
 
         $counts = [];
+        $snapshotPaths = [];
         foreach ($queries as $table => $query) {
             $counts[$table] = (clone $query)->count();
+            if ($table === 'competition_manual_verifications') {
+                $snapshotPaths = (clone $query)->pluck('foto_tangkapan')->all();
+            }
         }
 
         if ($this->option('dry-run')) {
@@ -89,8 +95,11 @@ class EraseSyntheticCompetitionSubject extends Command
                 true
             );
         });
+        if (! $this->deletePrivateSnapshots($snapshotPaths)) {
+            return self::FAILURE;
+        }
 
-        $this->info('Erased '.$this->formatCounts($counts).'. The latest consent record for this synthetic NISN was also erased; no client-table data was changed.');
+        $this->info('Erased '.$this->formatCounts($counts).'. The latest consent record for this synthetic NISN was also erased; client tables were not changed.');
 
         return self::SUCCESS;
     }
@@ -103,5 +112,25 @@ class EraseSyntheticCompetitionSubject extends Command
         return collect($counts)
             ->map(static fn (int $count, string $table): string => "{$table}: {$count}")
             ->implode(', ');
+    }
+
+    /**
+     * @param  list<mixed>  $paths
+     */
+    private function deletePrivateSnapshots(array $paths): bool
+    {
+        $disk = Storage::disk('local');
+        $deleted = true;
+        foreach (array_unique($paths) as $path) {
+            if (! is_string($path) || preg_match('/\Acompetition\/manual-verifications\/[0-9]+\.jpg\z/', $path) !== 1) {
+                continue;
+            }
+            if ($disk->exists($path) && ! $disk->delete($path)) {
+                $this->error('Failed to delete private snapshot: '.$path);
+                $deleted = false;
+            }
+        }
+
+        return $deleted;
     }
 }

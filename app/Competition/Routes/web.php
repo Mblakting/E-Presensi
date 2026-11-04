@@ -2,6 +2,7 @@
 
 use App\Competition\Http\ChallengeController;
 use App\Competition\Http\LivenessScriptController;
+use App\Competition\Http\ManualVerificationController;
 use App\Competition\Http\ReviewQueueController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
@@ -20,5 +21,7 @@ Route::middleware('web')->group(function (): void {
     Route::middleware('auth:user')->prefix('competition/reviews')->name('competition.reviews.')->group(function (): void {
         Route::get('/', [ReviewQueueController::class, 'index'])->name('index');
         Route::post('/{id}/decision', [ReviewQueueController::class, 'decide'])->name('decide');
+        Route::get('/manual/{id}/snapshot', [ManualVerificationController::class, 'snapshot'])->name('manual.snapshot');
+        Route::post('/manual/{id}/decision', [ManualVerificationController::class, 'decide'])->name('manual.decide');
     });
 });

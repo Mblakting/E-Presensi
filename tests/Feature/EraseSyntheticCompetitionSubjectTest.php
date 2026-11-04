@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class EraseSyntheticCompetitionSubjectTest extends TestCase
@@ -17,6 +18,7 @@ class EraseSyntheticCompetitionSubjectTest extends TestCase
             'competition.data_erasure' => true,
             'competition.consent_gate' => true,
         ]);
+        Storage::fake('local');
         Schema::create('siswa', function (Blueprint $table): void {
             $table->string('nisn')->primary();
             $table->string('foto')->nullable();
@@ -34,6 +36,7 @@ class EraseSyntheticCompetitionSubjectTest extends TestCase
             '2026_digifest_004_create_competition_verification_queue_table.php',
             '2026_digifest_005_create_competition_consents_table.php',
             '2026_digifest_006_create_competition_evaluation_trials_table.php',
+            '2026_digifest_007_create_competition_manual_verifications_table.php',
         ] as $migrationFile) {
             $migration = require base_path('database/migrations/'.$migrationFile);
             $migration->up();
@@ -66,10 +69,30 @@ class EraseSyntheticCompetitionSubjectTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-            DB::table('competition_trust_scores')->insert([
+            $trustScoreId = DB::table('competition_trust_scores')->insertGetId([
                 'nisn' => $nisn,
                 'score' => 60,
                 'verdict' => 'queued',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $snapshotPath = 'competition/manual-verifications/'.$challengeId.'.jpg';
+            Storage::disk('local')->put($snapshotPath, 'private image');
+            DB::table('competition_manual_verifications')->insert([
+                'challenge_id' => $challengeId,
+                'trust_score_id' => $trustScoreId,
+                'siswa_nisn' => $nisn,
+                'score' => 50,
+                'reason_code' => 'score_requires_review',
+                'reason' => 'Needs review',
+                'absen_type' => 'in',
+                'attendance_date' => now()->toDateString(),
+                'attendance_time' => '07:00:00',
+                'lokasi' => '-7.671325,110.589607',
+                'confidence' => 0.2,
+                'foto_tangkapan' => $snapshotPath,
+                'status' => 'pending',
+                'attempted_at' => now(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -130,7 +153,7 @@ class EraseSyntheticCompetitionSubjectTest extends TestCase
         $this->artisan('competition:erase-synthetic-subject', [
             'nisn' => '9999000001',
             '--confirm' => true,
-        ])->expectsOutputToContain('no client-table data was changed.')
+        ])->expectsOutputToContain('client tables were not changed.')
             ->assertExitCode(0);
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
@@ -140,6 +163,7 @@ class EraseSyntheticCompetitionSubjectTest extends TestCase
             'competition_liveness_challenges' => 'siswa_nisn',
             'competition_verification_queue' => 'siswa_nisn',
             'competition_consents' => 'siswa_nisn',
+            'competition_manual_verifications' => 'siswa_nisn',
         ] as $table => $column) {
             $this->assertSame(0, DB::table($table)->where($column, '9999000001')->count());
             $this->assertSame(1, DB::table($table)->where($column, '9999000002')->count());
@@ -155,6 +179,8 @@ class EraseSyntheticCompetitionSubjectTest extends TestCase
             ->count());
         $this->assertSame(1, DB::table('competition_audit_logs')->where('subject_nisn', '9999000002')->count());
         $this->assertSame(1, DB::table('competition_evaluation_trials')->count());
+        Storage::disk('local')->assertMissing('competition/manual-verifications/1.jpg');
+        Storage::disk('local')->assertExists('competition/manual-verifications/2.jpg');
         $this->assertSame(2, DB::table('siswa')->count());
         $this->assertSame(2, DB::table('presensi')->count());
         $this->assertSame(0, collect($queries)->filter(

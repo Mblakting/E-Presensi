@@ -83,4 +83,40 @@ class CompetitionMigrationRollbackTest extends TestCase
         $this->assertTrue(Schema::hasTable('siswa'));
         $this->assertTrue(Schema::hasTable('presensi'));
     }
+
+    public function test_phase_three_b_manual_verification_migration_rolls_back_without_touching_client_tables(): void
+    {
+        Schema::create('siswa', function (Blueprint $table): void {
+            $table->string('nisn')->primary();
+        });
+        Schema::create('presensi', function (Blueprint $table): void {
+            $table->id();
+            $table->string('nisn');
+        });
+        foreach ([
+            '2026_digifest_001_create_competition_trust_scores_table.php',
+            '2026_digifest_003_create_competition_liveness_challenges_table.php',
+        ] as $migrationFile) {
+            $dependency = require base_path('database/migrations/'.$migrationFile);
+            $dependency->up();
+        }
+        $migration = require base_path('database/migrations/2026_digifest_007_create_competition_manual_verifications_table.php');
+
+        $migration->up();
+        $this->assertSame(
+            [
+                'id', 'challenge_id', 'trust_score_id', 'siswa_nisn', 'score', 'reason_code',
+                'reason', 'absen_type', 'attendance_date', 'attendance_time', 'lokasi',
+                'confidence', 'foto_tangkapan', 'status', 'admin_id', 'catatan',
+                'attempted_at', 'reviewed_at', 'created_at', 'updated_at',
+            ],
+            Schema::getColumnListing('competition_manual_verifications')
+        );
+
+        $migration->down();
+
+        $this->assertFalse(Schema::hasTable('competition_manual_verifications'));
+        $this->assertTrue(Schema::hasTable('siswa'));
+        $this->assertTrue(Schema::hasTable('presensi'));
+    }
 }

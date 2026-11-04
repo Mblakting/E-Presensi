@@ -2,17 +2,17 @@
 
 namespace App\Competition\Http;
 
-use App\Competition\Models\AuditLog;
 use App\Competition\Models\LivenessChallenge;
-use App\Competition\Models\VerificationQueueItem;
+use App\Competition\Services\ConsentService;
 use App\Competition\Services\LivenessChallengeService;
+use App\Competition\Services\ManualVerificationService;
 use App\Competition\Services\TrustDecisionService;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnforceMiddleware
@@ -73,6 +73,14 @@ class EnforceMiddleware
         $nisn = Auth::guard('siswa')->id();
         if (! is_string($nisn) || $nisn === '') {
             return $this->failure('student_auth_required', 'Sesi siswa tidak ditemukan. Silakan masuk kembali.', 401);
+        }
+        if (config('competition.consent_gate', false)
+            && ! app(ConsentService::class)->isGranted($nisn)) {
+            return $this->failure(
+                'face_consent_required',
+                'Persetujuan pemrosesan wajah belum aktif. Gunakan presensi non-wajah atau hubungi pengelola.',
+                403
+            );
         }
 
         $nonce = $request->input('challenge_nonce');
@@ -157,70 +165,36 @@ class EnforceMiddleware
             return $this->failure($decision['reason_code'], $decision['reason'], 422);
         }
 
-        $response = $next($request);
-        if ($decision['verdict'] !== 'review' || ! $this->attendanceSucceeded($response)) {
-            return $response;
-        }
+        if ($decision['verdict'] === 'review') {
+            try {
+                app(ManualVerificationService::class)->createPending($challenge, $decision, $nisn, $request->all());
+            } catch (ValidationException $exception) {
+                $message = collect($exception->errors())->flatten()->first() ?? 'Data percobaan presensi tidak valid.';
 
-        try {
-            $this->createReviewQueueItem($challenge, $decision, $response);
-        } catch (\Throwable $exception) {
-            Log::error('[Competition] Attendance succeeded but verification queue insertion failed.', [
-                'challenge_id' => $challenge->id,
-                'exception_class' => $exception::class,
+                return $this->failure('manual_verification_invalid', $message, 422);
+            } catch (\Throwable $exception) {
+                Log::error('[Competition] Failed to create manual verification item.', [
+                    'challenge_id' => $challenge->id,
+                    'exception_class' => $exception::class,
+                ]);
+
+                return $this->failure(
+                    'manual_verification_unavailable',
+                    'Percobaan presensi tidak dapat disimpan untuk verifikasi. Tidak ada presensi yang dicatat; silakan coba lagi.',
+                    503
+                );
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Presensi memerlukan verifikasi manual admin. Mohon tunggu.',
+                'verification_status' => 'pending',
             ]);
-            $response->setData(array_merge($response->getData(true), [
-                'message' => 'Presensi tercatat, tetapi antrean verifikasi gagal disimpan. Hubungi admin sekolah.',
-                'verification_status' => 'queue_error',
-            ]));
-
-            return $response;
         }
 
-        $data = $response->getData(true);
-        $data['message'] = 'Presensi tercatat dan menunggu verifikasi admin.';
-        $data['verification_status'] = 'pending';
-        $response->setData($data);
+        $response = $next($request);
 
         return $response;
-    }
-
-    private function attendanceSucceeded(Response $response): bool
-    {
-        if (! $response instanceof JsonResponse || $response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
-            return false;
-        }
-
-        return ($response->getData(true)['status'] ?? null) === 'success';
-    }
-
-    private function createReviewQueueItem(LivenessChallenge $challenge, array $decision, JsonResponse $response): void
-    {
-        DB::transaction(function () use ($challenge, $decision, $response): void {
-            $attendanceType = $response->getData(true)['type'] ?? 'in';
-            VerificationQueueItem::query()->create([
-                'challenge_id' => $challenge->id,
-                'siswa_nisn' => $challenge->siswa_nisn,
-                'absen_type' => in_array($attendanceType, ['in', 'out'], true) ? $attendanceType : 'in',
-                'score' => $decision['score'],
-                'reason_code' => $decision['reason_code'],
-                'reason' => $decision['reason'],
-                'status' => 'pending',
-            ]);
-
-            LivenessChallenge::query()->whereKey($challenge->id)->update([
-                'attendance_recorded_at' => now(),
-            ]);
-
-            AuditLog::record(
-                'verification_queued',
-                'system',
-                null,
-                $challenge->siswa_nisn,
-                ['challenge_id' => $challenge->id, 'score' => $decision['score']],
-                str_starts_with($challenge->siswa_nisn, '9999')
-            );
-        });
     }
 
     private function recordEvaluationFailure(LivenessChallenge $challenge, string $nisn, \Throwable $exception): void

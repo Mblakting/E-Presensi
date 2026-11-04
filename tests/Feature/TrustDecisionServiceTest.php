@@ -166,6 +166,29 @@ class TrustDecisionServiceTest extends TestCase
         $this->assertSame('rejected', $gpsTooLow['verdict']);
     }
 
+    public function test_unavailable_fallback_below_review_score_is_rejected(): void
+    {
+        config([
+            'competition.liveness_challenge.weights' => [
+                'face' => 18,
+                'gps' => 15,
+                'consistency' => 0,
+                'liveness' => 30,
+            ],
+        ]);
+        $result = app(TrustDecisionService::class)->evaluate(
+            $this->request(0.2, '-7.671325,110.589607'),
+            '9999000001',
+            'blink',
+            'unavailable',
+            []
+        );
+
+        $this->assertSame(33, $result['score']);
+        $this->assertSame('score_below_review', $result['reason_code']);
+        $this->assertSame('rejected', $result['verdict']);
+    }
+
     private function request(float $confidence, string $location): Request
     {
         return Request::create('/presensi/face/store', 'POST', [

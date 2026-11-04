@@ -6,6 +6,7 @@ use App\Competition\Models\EvaluationTrial;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CompetitionRetentionPurgeTest extends TestCase
@@ -20,7 +21,9 @@ class CompetitionRetentionPurgeTest extends TestCase
             'competition.retention.audit_days' => 90,
             'competition.retention.consent_history_days' => 365,
             'competition.evaluation.retention_days' => 180,
+            'competition.manual_verification.retention_days' => 90,
         ]);
+        Storage::fake('local');
         Schema::create('siswa', function (Blueprint $table): void {
             $table->string('nisn')->primary();
         });
@@ -30,11 +33,13 @@ class CompetitionRetentionPurgeTest extends TestCase
         });
         foreach ([
             '2026_digifest_001_create_competition_trust_scores_table.php',
+            '2026_digifest_001_create_competition_trust_scores_table.php',
             '2026_digifest_002_create_competition_audit_logs_table.php',
             '2026_digifest_003_create_competition_liveness_challenges_table.php',
             '2026_digifest_004_create_competition_verification_queue_table.php',
             '2026_digifest_005_create_competition_consents_table.php',
             '2026_digifest_006_create_competition_evaluation_trials_table.php',
+            '2026_digifest_007_create_competition_manual_verifications_table.php',
         ] as $migrationFile) {
             $migration = require base_path('database/migrations/'.$migrationFile);
             $migration->up();
@@ -48,7 +53,7 @@ class CompetitionRetentionPurgeTest extends TestCase
     public function test_dry_run_and_purge_respect_retention_and_keep_latest_consent_without_touching_client_rows(): void
     {
         $this->artisan('competition:purge-liveness-data', ['--dry-run' => true])
-            ->expectsOutputToContain('1 challenge(s), 1 review item(s), 1 audit event(s), 2 superseded consent record(s), and 1 evaluation trial(s)')
+            ->expectsOutputToContain('1 challenge(s), 1 review item(s), 1 audit event(s), 2 superseded consent record(s), 1 evaluation trial(s), and 1 manual verification(s)')
             ->assertExitCode(0);
         $this->assertSame(4, DB::table('competition_consents')->count());
         $this->assertSame(2, EvaluationTrial::query()->count());
@@ -65,6 +70,8 @@ class CompetitionRetentionPurgeTest extends TestCase
             'status' => 'withdrawn',
         ]);
         $this->assertSame(1, EvaluationTrial::query()->count());
+        $this->assertDatabaseCount('competition_manual_verifications', 0);
+        Storage::disk('local')->assertMissing('competition/manual-verifications/1.jpg');
         $this->assertDatabaseHas('competition_audit_logs', ['event_type' => 'competition_data_purged']);
         $this->assertSame(1, DB::table('siswa')->count());
         $this->assertSame(1, DB::table('presensi')->count());
@@ -77,6 +84,19 @@ class CompetitionRetentionPurgeTest extends TestCase
         $this->artisan('competition:purge-liveness-data', ['--dry-run' => true])
             ->expectsOutputToContain('positive integer')
             ->assertExitCode(1);
+    }
+
+    public function test_challenge_retention_does_not_remove_a_manual_item_with_longer_retention(): void
+    {
+        config(['competition.manual_verification.retention_days' => 180]);
+
+        $this->artisan('competition:purge-liveness-data', ['--dry-run' => true])
+            ->expectsOutputToContain('Dry run: 0 challenge(s)')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseCount('competition_liveness_challenges', 2);
+        $this->assertDatabaseCount('competition_manual_verifications', 1);
+        Storage::disk('local')->assertExists('competition/manual-verifications/1.jpg');
     }
 
     private function seedData(): void
@@ -136,6 +156,34 @@ class CompetitionRetentionPurgeTest extends TestCase
                 'updated_at' => $date,
             ]);
         }
+
+        Storage::disk('local')->put('competition/manual-verifications/1.jpg', 'private image');
+        $trustScoreId = DB::table('competition_trust_scores')->insertGetId([
+            'nisn' => '9999000001',
+            'score' => 50,
+            'verdict' => 'queued',
+            'is_shadow' => false,
+            'created_at' => $old,
+            'updated_at' => $old,
+        ]);
+        DB::table('competition_manual_verifications')->insert([
+            'challenge_id' => 1,
+            'trust_score_id' => $trustScoreId,
+            'siswa_nisn' => '9999000001',
+            'score' => 50,
+            'reason_code' => 'score_requires_review',
+            'reason' => 'Skor memerlukan verifikasi.',
+            'absen_type' => 'in',
+            'attendance_date' => $old->toDateString(),
+            'attendance_time' => '07:00:00',
+            'lokasi' => '-7.671325,110.589607',
+            'confidence' => 0.2,
+            'foto_tangkapan' => 'competition/manual-verifications/1.jpg',
+            'status' => 'pending',
+            'attempted_at' => $old,
+            'created_at' => $old,
+            'updated_at' => $old,
+        ]);
     }
 
     private function consentRow(string $nisn, string $status, \Carbon\CarbonInterface $date): array

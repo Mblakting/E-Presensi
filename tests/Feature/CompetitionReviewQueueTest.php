@@ -45,9 +45,13 @@ class CompetitionReviewQueueTest extends TestCase
         });
 
         foreach ([
+            '2026_digifest_001_create_competition_trust_scores_table.php',
             '2026_digifest_002_create_competition_audit_logs_table.php',
             '2026_digifest_003_create_competition_liveness_challenges_table.php',
             '2026_digifest_004_create_competition_verification_queue_table.php',
+            '2026_digifest_005_create_competition_consents_table.php',
+            '2026_digifest_006_create_competition_evaluation_trials_table.php',
+            '2026_digifest_007_create_competition_manual_verifications_table.php',
         ] as $migrationFile) {
             $migration = require base_path('database/migrations/'.$migrationFile);
             $migration->up();

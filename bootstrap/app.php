@@ -37,12 +37,12 @@ return Application::configure(basePath: dirname(__DIR__))
             $middleware->appendToGroup('web', \App\Competition\Http\TrustEngineMiddleware::class);
         }
 
-        if (config('competition.trust_engine_enforce', false)) {
-            $middleware->appendToGroup('web', \App\Competition\Http\EnforceMiddleware::class);
-        }
-
         if (config('competition.consent_gate', false)) {
             $middleware->appendToGroup('web', \App\Competition\Http\ConsentGateMiddleware::class);
+        }
+
+        if (config('competition.trust_engine_enforce', false)) {
+            $middleware->appendToGroup('web', \App\Competition\Http\EnforceMiddleware::class);
         }
     })
     ->withExceptions(function (Exceptions $exceptions): void {

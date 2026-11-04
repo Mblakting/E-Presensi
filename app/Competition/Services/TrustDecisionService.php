@@ -13,6 +13,7 @@ class TrustDecisionService
     {
         $weights = config('competition.liveness_challenge.weights', []);
         $thresholds = config('competition.liveness_challenge.thresholds', []);
+        $reviewThreshold = (int) ($thresholds['review'] ?? 40);
         $faceScore = $this->faceScore($request->input('confidence'), (int) ($weights['face'] ?? 30));
         $gpsScore = $this->gpsScore($request->input('lokasi'), (int) ($weights['gps'] ?? 25));
         $consistencyScore = $this->consistencyScore($nisn, (int) ($weights['consistency'] ?? 15));
@@ -63,6 +64,19 @@ class TrustDecisionService
                     $livenessScore
                 );
             }
+            if ($score < $reviewThreshold) {
+                return $this->result(
+                    'rejected',
+                    'score_below_review',
+                    'Skor sinyal berada di bawah ambang minimum untuk verifikasi admin.',
+                    $livenessStatus,
+                    $score,
+                    $faceScore,
+                    $gpsScore,
+                    $consistencyScore,
+                    $livenessScore
+                );
+            }
 
             return $this->result(
                 'review',
@@ -78,7 +92,6 @@ class TrustDecisionService
         }
 
         $acceptThreshold = (int) ($thresholds['accept'] ?? 70);
-        $reviewThreshold = (int) ($thresholds['review'] ?? 40);
         if ($validProof && $score >= $acceptThreshold) {
             return $this->result(
                 'accepted',

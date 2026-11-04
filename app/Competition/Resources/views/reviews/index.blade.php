@@ -6,7 +6,7 @@
         <div class="row align-items-center">
             <div class="col">
                 <h2 class="page-title">Antrean Verifikasi Presensi</h2>
-                <div class="text-secondary mt-1">Keputusan di sini hanya mengubah catatan kompetisi, bukan data presensi.</div>
+                <div class="text-secondary mt-1">Review challenge lama hanya mengubah catatan kompetisi. Antrean manual baru belum menulis presensi sampai admin menyetujui.</div>
             </div>
         </div>
     </div>
@@ -60,6 +60,62 @@
             </table>
         </div>
         <div class="card-footer">{{ $items->links() }}</div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3 class="card-title">Antrean Verifikasi Manual (Trust Engine)</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="table card-table table-vcenter">
+                <thead>
+                    <tr>
+                        <th>Nama Siswa</th>
+                        <th>Waktu Coba Absen</th>
+                        <th>Skor Keputusan</th>
+                        <th>Alasan</th>
+                        <th>Foto Tangkapan</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($manualItems as $manualItem)
+                        <tr>
+                            <td>{{ $manualItem->nama_lengkap }} <small class="text-secondary">({{ $manualItem->siswa_nisn }})</small></td>
+                            <td>{{ $manualItem->attempted_at }}</td>
+                            <td>{{ $manualItem->score }}</td>
+                            <td>{{ $manualItem->reason }}</td>
+                            <td>
+                                <a href="{{ route('competition.reviews.manual.snapshot', $manualItem->id) }}" target="_blank" rel="noopener">Lihat foto</a>
+                            </td>
+                            <td>{{ ucfirst($manualItem->status) }}</td>
+                            <td>
+                                @if ($manualItem->status === 'pending')
+                                    <form method="POST" action="{{ route('competition.reviews.manual.decide', $manualItem->id) }}" class="mb-1">
+                                        @csrf
+                                        <input type="hidden" name="decision" value="approved">
+                                        <input class="form-control form-control-sm mb-1" name="catatan" maxlength="2000" placeholder="Catatan (opsional)">
+                                        <button class="btn btn-sm btn-success" type="submit">Terima dan catat presensi</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('competition.reviews.manual.decide', $manualItem->id) }}">
+                                        @csrf
+                                        <input type="hidden" name="decision" value="rejected">
+                                        <input class="form-control form-control-sm mb-1" name="catatan" maxlength="2000" placeholder="Alasan penolakan (opsional)">
+                                        <button class="btn btn-sm btn-danger" type="submit">Tolak</button>
+                                    </form>
+                                @else
+                                    <span class="text-secondary">Sudah ditinjau</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7" class="text-center text-secondary py-4">Belum ada presensi yang menunggu verifikasi manual.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer">{{ $manualItems->links() }}</div>
     </div>
 </div>
 @endsection

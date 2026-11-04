@@ -11,7 +11,7 @@
 | Import CSV Siswa | ✅ Pre-existing (klien) | Tidak dimodifikasi |
 | Batch Face ID Generator | ✅ Pre-existing (klien) | Tidak dimodifikasi |
 | **Trust Engine (Shadow)** | 🆕 Inovasi lomba | Phase 2 — flag: `FEATURE_TRUST_ENGINE_SHADOW` |
-| **Liveness challenge + review queue** | 🆕 Inovasi lomba | Phase 3a — flag: `FEATURE_TRUST_ENGINE_ENFORCE` |
+| **Liveness challenge + manual verification queue** | 🆕 Inovasi lomba | Flag: `FEATURE_TRUST_ENGINE_ENFORCE`; skor 40–70 ditahan sebelum masuk tabel presensi sampai disetujui admin |
 | **Consent ledger + face-processing gate** | 🆕 Inovasi lomba | Phase 4a — flag: `FEATURE_COMPETITION_CONSENT` |
 | **AI Evaluation Dashboard + manual trials** | 🆕 Inovasi lomba | Phase 4b — flag: `FEATURE_AI_EVALUATION_DASHBOARD` |
 | **Competition audit viewer** | 🆕 Inovasi lomba | Phase 4c — flag: `FEATURE_COMPETITION_AUDIT_VIEWER` |
@@ -29,9 +29,9 @@
 ## Data & Privasi
 
 - **Data demo:** data siswa pada `CompetitionSyntheticSeeder` sintetis. NISN prefix `9999` digunakan untuk data demo tersebut.
-- **Data pribadi:** NISN tetap merupakan data pribadi walaupun NISN demo bersifat sintetis. Trust score mengaitkan NISN dengan skor/verdict.
+- **Data pribadi:** NISN tetap merupakan data pribadi walaupun NISN demo bersifat sintetis. Trust score shadow maupun skor keputusan antrean mengaitkan NISN dengan skor/verdict.
 - **Sinyal lokasi/waktu:** validasi presensi lama tetap menyimpan lokasi sesuai perilaku klien. Trust Engine tidak menyimpan koordinat mentah pada `raw_signals`; ia hanya menyimpan jarak hasil perhitungan dari lokasi sekolah, akurasi GPS, dan selisih waktu hasil perhitungan. Nilai-nilai turunan tersebut tetap dapat menjadi data pribadi ketika dikaitkan dengan NISN.
-- **Challenge/review Phase 3a:** tabel baru menyimpan NISN, hash nonce, hash sesi, instruksi challenge, status/waktu, skor turunan, alasan, dan keputusan reviewer. Tidak menyimpan nonce plaintext, foto, descriptor wajah, koordinat, atau sampel frame. Audit event keputusan menggunakan tabel audit kompetisi yang juga menyimpan actor/IP/user-agent sesuai skema audit yang sudah ada.
+- **Challenge/review:** `competition_liveness_challenges` menyimpan NISN, hash nonce, hash sesi, instruksi challenge, status/waktu, dan skor turunan. `competition_manual_verifications` menyimpan skor/verdict, alasan, waktu/jenis presensi, lokasi yang dikirim untuk percobaan, identitas admin/keputusan, dan path snapshot JPEG. Snapshot disimpan privat untuk review admin; tidak ada descriptor wajah atau nonce plaintext. Jika disetujui, snapshot disalin ke penyimpanan foto presensi klien dan baris `presensi` ditulis. Jika ditolak, tabel klien tidak berubah. Audit event keputusan menggunakan tabel audit kompetisi yang juga menyimpan actor/IP/user-agent sesuai skema audit yang sudah ada.
 - **Consent Phase 4a:** `competition_consents` adalah ledger append-only berisi NISN, status grant/withdraw, versi dan hash teks, aktor, dasar verifikasi, serta waktu. Teks default di `config/competition.php` adalah DRAF dengan placeholder kontak dan `text_approved=false`; grant nyata diblokir sampai pengguna meninjau teks, mengisi kontak, menaikkan versi, dan menyetujui konfigurasi. Untuk siswa di bawah umur, proses tertulis sekolah/wali tetap diperlukan. Ini bukan nasihat hukum atau klaim kepatuhan.
 - **Trial Phase 4b:** `competition_evaluation_trials` hanya menyimpan jenis uji (`genuine`/`print`/`screen`), hasil, alasan, kode penguji anonim (`T1`, `T2`, ...), tanggal, catatan, dan fingerprint deduplikasi. Tidak ada kolom wajah, descriptor, NISN subjek, atau nama penguji. Import CSV memeriksa pola email, nomor panjang/telepon, dan kode penguji; teks bebas tetap harus diperiksa manusia untuk nama atau identitas lain sebelum ekspor/commit.
 - **AI Evaluation:** dashboard hanya membaca challenge dan trial yang benar-benar tercatat. Review dipisahkan dari denominator; FAR/FRR tidak ditampilkan tanpa denominator. Snapshot di `docs/evaluation/` saat ini header-only dengan `n=0`; belum ada klaim angka performa atau hasil anti-spoofing.
@@ -47,16 +47,17 @@
 
   | Data | Tujuan | Retensi default dan penghapusan |
   |------|--------|---------------------------------|
-  | `competition_trust_scores` | Sinyal skor shadow untuk evaluasi | 90 hari (`COMPETITION_TRUST_SCORE_RETENTION_DAYS`); purge manual `competition:purge-trust-scores` |
+  | `competition_trust_scores` | Skor shadow serta skor keputusan review yang ditandai `is_shadow=false` | 90 hari (`COMPETITION_TRUST_SCORE_RETENTION_DAYS`); purge manual `competition:purge-trust-scores` |
   | `competition_liveness_challenges` | Validasi nonce, hasil challenge dan keputusan | 90 hari (`COMPETITION_LIVENESS_RETENTION_DAYS`); purge manual `competition:purge-liveness-data` |
   | `competition_verification_queue` | Tinjauan manusia atas verdict review | 90 hari; purge manual `competition:purge-liveness-data` |
+  | `competition_manual_verifications` + snapshot privat | Menahan presensi grey-area sampai keputusan admin; bukti visual review | 90 hari (`COMPETITION_MANUAL_VERIFICATION_RETENTION_DAYS`); purge manual `competition:purge-liveness-data`, termasuk file snapshot privat |
   | `competition_audit_logs` | Jejak keputusan, akses admin, perubahan consent, impor, ekspor, dan purge | 90 hari (`COMPETITION_AUDIT_RETENTION_DAYS`); purge manual `competition:purge-liveness-data` |
   | `competition_consents` — status terbaru per NISN | Menegakkan grant/withdraw dan menghentikan pemrosesan wajah | Dipertahankan selama pemrosesan wajah masih mungkin; tidak ikut purge |
   | `competition_consents` — baris yang sudah digantikan | Riwayat versi/status persetujuan | 365 hari (`COMPETITION_CONSENT_HISTORY_RETENTION_DAYS`); purge manual hanya menghapus baris superseded |
   | `competition_evaluation_trials` | Bukti uji genuine/print/screen untuk evaluasi | 180 hari (`COMPETITION_EVALUATION_RETENTION_DAYS`); hanya purge manual, tidak dijadwalkan otomatis |
   | Tabel klien `siswa`/`presensi` (foto, descriptor, lokasi, presensi) | Alur operasional klien | Tidak dihapus oleh purge kompetisi; retensi mengikuti kebijakan/prosedur klien |
 
-  `competition:purge-liveness-data --dry-run` menampilkan jumlah sebelum penghapusan; gunakan tanpa `--dry-run` hanya setelah jumlah ditinjau. Trust score memiliki command dry-run terpisah. Tidak ada purge yang dijadwalkan otomatis. Nilai dapat diubah lewat konfigurasi/environment; tabel di atas menjelaskan default.
+  `competition:purge-liveness-data --dry-run` menampilkan jumlah sebelum penghapusan; gunakan tanpa `--dry-run` hanya setelah jumlah ditinjau. Trust score memiliki command dry-run terpisah. Snapshot yang sudah disetujui dan disalin ke penyimpanan foto presensi klien tidak dihapus oleh purge kompetisi. Tidak ada purge yang dijadwalkan otomatis. Nilai dapat diubah lewat konfigurasi/environment; tabel di atas menjelaskan default.
 
   Penghapusan per subjek adalah operasi terpisah dan eksplisit; berbeda dari purge retensi, operasi ini menghapus juga status consent terbaru untuk subjek sintetis yang diminta. Jangan jalankan pada NISN nyata atau pada instance produksi klien.
 

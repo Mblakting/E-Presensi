@@ -3,6 +3,7 @@
 namespace App\Competition\Http;
 
 use App\Competition\Models\AuditLog;
+use App\Competition\Models\ManualVerification;
 use App\Competition\Models\VerificationQueueItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,8 +27,14 @@ class ReviewQueueController
             ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
             ->orderByDesc('created_at')
             ->paginate(25);
+        $manualItems = ManualVerification::query()
+            ->join('siswa', 'siswa.nisn', '=', 'competition_manual_verifications.siswa_nisn')
+            ->select('competition_manual_verifications.*', 'siswa.nama_lengkap')
+            ->orderByRaw("CASE WHEN competition_manual_verifications.status = 'pending' THEN 0 ELSE 1 END")
+            ->orderByDesc('competition_manual_verifications.attempted_at')
+            ->paginate(25, ['*'], 'manual_page');
 
-        return view('competition::reviews.index', compact('items'));
+        return view('competition::reviews.index', compact('items', 'manualItems'));
     }
 
     public function decide(Request $request, int $id): RedirectResponse
