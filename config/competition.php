@@ -86,16 +86,4 @@ CONSENT,
     ],
     'audit_viewer' => env('FEATURE_COMPETITION_AUDIT_VIEWER', false),
     'data_erasure' => env('FEATURE_COMPETITION_DATA_ERASURE', false),
-
-    /*
-     * Phase 5: Anomaly Detection — deteksi pola bolos/terlambat.
-     */
-    'anomaly_detection' => env('FEATURE_ANOMALY_DETECTION', false),
-
-    /*
-     * Master switch: tampilkan menu navigasi fitur lomba di sidebar admin.
-     * Jika false, tidak ada UI lomba yang terlihat sama sekali.
-     */
-    'competition_menu' => env('FEATURE_COMPETITION_MENU', false),
-
 ];

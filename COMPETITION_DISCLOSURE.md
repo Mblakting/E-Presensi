@@ -15,7 +15,7 @@
 | **Consent ledger + face-processing gate** | 🆕 Inovasi lomba | Phase 4a — flag: `FEATURE_COMPETITION_CONSENT` |
 | **AI Evaluation Dashboard + manual trials** | 🆕 Inovasi lomba | Phase 4b — flag: `FEATURE_AI_EVALUATION_DASHBOARD` |
 | **Competition audit viewer** | 🆕 Inovasi lomba | Phase 4c — flag: `FEATURE_COMPETITION_AUDIT_VIEWER` |
-| **Anomaly Detection** | 🆕 Inovasi lomba | Phase 5 — flag: `FEATURE_ANOMALY_DETECTION` |
+| **Competition-only synthetic data erasure** | 🆕 Inovasi lomba | Phase 4c — flag: `FEATURE_COMPETITION_DATA_ERASURE` dan consent gate |
 
 ## Framework & Library AI
 
@@ -79,26 +79,32 @@ Jangan jalankan `php artisan db:seed` tanpa class pada instance lomba: `Database
 - Sinyal liveness dihitung di browser; challenge nonce server menjamin keterikatan sesi, kedaluwarsa, sekali pakai, dan penolakan request tanpa nonce valid, tetapi tidak membuktikan bahwa sinyal browser tidak dipalsukan.
 - Jalur `liveness_unavailable` dapat mencatat presensi sebagai menunggu review jika nilai minimum wajah/GPS lulus dan kuota harian belum habis; ini celah yang diketahui dan dicatat di README.
 - Jarak wajah tetap dihitung di browser sampai Phase 3b; nilai `confidence` dapat dipalsukan oleh klien langsung.
+- Belum ada hasil uji kamera manusia. Snapshot evaluasi saat ini `n=0`; tidak ada hasil foto cetak/layar atau metrik FAR/FRR yang diklaim.
 - Uji foto cetak/layar adalah manual dan belum dianggap terverifikasi oleh laporan ini. Langkah uji disediakan di `docs/PHASE3A_MANUAL_TEST.md`.
 - Pemeriksaan consent dan pengujian manual Phase 4 dijelaskan di `docs/PHASE4_MANUAL_TEST.md`. Belum ada hasil percobaan kamera manusia yang dimasukkan; jangan menyimpulkan foto cetak/layar ditolak hanya dari tes otomatis.
 - Trust Score adalah **indikator bantu**, bukan keputusan final.
-- Anomaly Detection adalah **sinyal statistik**, bukan vonis pelanggaran.
 - Semua keputusan disiplin tetap di tangan manusia (guru/admin).
 - Sistem tidak menggunakan data biometrik untuk tujuan selain verifikasi kehadiran.
 
 ## Arsitektur Feature Flag
 
-Semua fitur lomba dikendalikan via `.env`:
+Semua feature flag yang benar-benar tersedia dibaca oleh `config/competition.php` dan default ke `false`:
+
 ```
-FEATURE_TRUST_ENGINE_SHADOW=false    # Phase 2
-FEATURE_TRUST_ENGINE_ENFORCE=false   # Phase 3
-FEATURE_COMPETITION_CONSENT=false     # Phase 4a
-FEATURE_AI_EVALUATION_DASHBOARD=false # Phase 4b
-FEATURE_COMPETITION_AUDIT_VIEWER=false # Phase 4c
-FEATURE_ANOMALY_DETECTION=false      # Phase 5
-FEATURE_COMPETITION_MENU=false       # Master switch UI
+FEATURE_TRUST_ENGINE_SHADOW=false
+FEATURE_TRUST_ENGINE_ENFORCE=false
+FEATURE_COMPETITION_CONSENT=false
+FEATURE_AI_EVALUATION_DASHBOARD=false
+FEATURE_COMPETITION_AUDIT_VIEWER=false
+FEATURE_COMPETITION_DATA_ERASURE=false
 ```
-Retention dapat dikonfigurasi dengan `COMPETITION_TRUST_SCORE_RETENTION_DAYS=90`, `COMPETITION_LIVENESS_RETENTION_DAYS=90`, `COMPETITION_AUDIT_RETENTION_DAYS=90`, `COMPETITION_CONSENT_HISTORY_RETENTION_DAYS=365`, dan `COMPETITION_EVALUATION_RETENTION_DAYS=180`. Dengan semua flag `false`, aplikasi berperilaku **identik** dengan versi pesanan klien.
+
+Parameter lain yang dibaca konfigurasi adalah `COMPETITION_DEMO_PASSWORD`, `COMPETITION_CHALLENGE_TTL_SECONDS`, `COMPETITION_TRUST_SCORE_RETENTION_DAYS`, `COMPETITION_LIVENESS_RETENTION_DAYS`, `COMPETITION_AUDIT_RETENTION_DAYS`, `COMPETITION_CONSENT_HISTORY_RETENTION_DAYS`, dan `COMPETITION_EVALUATION_RETENTION_DAYS`. Nilai contoh dan default-nya tercantum di `.env.example` serta tabel retensi di atas. Dengan semua feature flag `false`, aplikasi berperilaku **identik** dengan versi pesanan klien.
+
+## Potensi Pengembangan — Belum Diimplementasikan
+
+- Deteksi anomali kehadiran belum tersedia. Belum ada analitik anomali, model, route, atau flag aktif; ide ini tidak termasuk fitur yang dapat digunakan atau dinilai pada versi ini.
+- Menu navigasi kompetisi terpisah belum tersedia; halaman kompetisi dibuka melalui route yang terdaftar ketika flag fiturnya aktif. Tidak ada master flag menu.
 
 ## AI Coding Assistant
 

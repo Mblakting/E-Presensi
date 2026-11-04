@@ -28,6 +28,8 @@ Schools need a practical way to record student arrival/departure and review atte
 - Competition-only synthetic student/attendance seeder and trust/liveness-data retention purge commands.
 - Competition flags default to `false`; the competition features are not enabled by default.
 
+The implemented competition feature flags are `FEATURE_TRUST_ENGINE_SHADOW`, `FEATURE_TRUST_ENGINE_ENFORCE`, `FEATURE_COMPETITION_CONSENT`, `FEATURE_AI_EVALUATION_DASHBOARD`, `FEATURE_COMPETITION_AUDIT_VIEWER`, and `FEATURE_COMPETITION_DATA_ERASURE`. Their defaults and related retention/TTL parameters are listed in [.env.example](.env.example). Anomaly detection and a competition navigation master switch are not implemented and have no active flags.
+
 ## Tech Stack
 
 - PHP 8.2+ and Laravel 12.
@@ -123,6 +125,7 @@ Synthetic student accounts are created by `CompetitionSyntheticSeeder` with NISN
 - Reasons and notes in trial CSVs are free text. The importer checks common identifier patterns and requires tester codes like `T1`, but a human must inspect the snapshot for names or other identifiers before commit.
 - Retention purge is not scheduled automatically. The configured durations are defaults and require an operator to run the dry-run, inspect counts, and invoke purge manually.
 - `FEATURE_TRUST_ENGINE_ENFORCE` defaults false. With all flags false, competition routes and script injection are not registered or run.
+- No camera trials have been recorded: the evaluation snapshot is `n=0`, so no FAR/FRR or print/screen rejection result is claimed.
 - GPS checks depend on browser/device location and the existing server-side geofence validation.
 - `phpunit.xml` references an absent `tests/DeployFix` suite; run Unit and Feature suites separately.
 - No deployment URL or team-member roster was supplied for this repository.
