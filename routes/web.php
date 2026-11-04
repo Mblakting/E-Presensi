@@ -8,6 +8,7 @@ use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\JurusanController;
 use App\Http\Controllers\FaceRecognitionController;
 use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\StudentImportController;
 
 // ─── Guest: Siswa ─────────────────────────────────────────────────────────────
 Route::middleware('guest:siswa')->group(function () {
@@ -72,6 +73,10 @@ Route::middleware('auth:user')->group(function () {
     Route::post('/siswa/edit', [SiswaController::class, 'edit'])->name('siswa.edit');
     Route::post('/siswa/{nisn}/update', [SiswaController::class, 'update'])->name('siswa.update');
     Route::post('/siswa/{nisn}/delete', [SiswaController::class, 'delete'])->name('siswa.delete');
+
+    // Import CSV Siswa
+    Route::get('/siswa/import', [StudentImportController::class, 'index'])->name('siswa.import.form');
+    Route::post('/siswa/import', [StudentImportController::class, 'import'])->name('siswa.import');
 
     // Manajemen Jurusan
     Route::get('/jurusan', [JurusanController::class, 'index'])->name('jurusan.index');
