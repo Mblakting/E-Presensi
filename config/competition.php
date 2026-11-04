@@ -18,11 +18,32 @@ return [
     'trust_engine_shadow' => env('FEATURE_TRUST_ENGINE_SHADOW', false),
 
     /*
-     * Phase 3: Trust Engine enforce mode.
-     * Skor rendah → tolak, menengah → antrean verifikasi admin, tinggi → terima.
-     * Hanya aktif jika trust_engine_shadow juga true.
+     * Phase 3a: Trust Engine enforce mode.
+     * Challenge-response, keputusan skor, dan antrean review.
      */
     'trust_engine_enforce' => env('FEATURE_TRUST_ENGINE_ENFORCE', false),
+    'liveness_challenge' => [
+        'ttl_seconds' => env('COMPETITION_CHALLENGE_TTL_SECONDS', 90),
+        'weights' => [
+            'face' => 30,
+            'gps' => 25,
+            'consistency' => 15,
+            'liveness' => 30,
+        ],
+        'face_perfect_distance' => 0.20,
+        'face_distance_limit' => 0.55,
+        'thresholds' => [
+            'accept' => 70,
+            'review' => 40,
+            'face_min' => 18,
+            'gps_min' => 15,
+            'unavailable_daily_limit' => 2,
+            'blink_delta_min' => 0.10,
+            'turn_delta_min' => 0.12,
+            'proof_min_elapsed_ms' => 800,
+            'proof_max_elapsed_ms' => 15000,
+        ],
+    ],
 
     /*
      * Phase 4: Halaman AI Evaluation Dashboard (metrik FAR/FRR, audit log).

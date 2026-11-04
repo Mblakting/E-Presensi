@@ -1,0 +1,36 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
+
+class CompetitionMigrationRollbackTest extends TestCase
+{
+    public function test_phase_three_migrations_create_and_drop_only_their_competition_tables(): void
+    {
+        Schema::create('siswa', function (Blueprint $table): void {
+            $table->string('nisn')->primary();
+        });
+        Schema::create('presensi', function (Blueprint $table): void {
+            $table->id();
+            $table->string('nisn');
+        });
+        $challengeMigration = require base_path('database/migrations/2026_digifest_003_create_competition_liveness_challenges_table.php');
+        $queueMigration = require base_path('database/migrations/2026_digifest_004_create_competition_verification_queue_table.php');
+
+        $challengeMigration->up();
+        $queueMigration->up();
+        $this->assertTrue(Schema::hasTable('competition_liveness_challenges'));
+        $this->assertTrue(Schema::hasTable('competition_verification_queue'));
+
+        $queueMigration->down();
+        $challengeMigration->down();
+
+        $this->assertFalse(Schema::hasTable('competition_verification_queue'));
+        $this->assertFalse(Schema::hasTable('competition_liveness_challenges'));
+        $this->assertTrue(Schema::hasTable('siswa'));
+        $this->assertTrue(Schema::hasTable('presensi'));
+    }
+}
