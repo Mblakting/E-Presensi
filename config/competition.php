@@ -74,6 +74,10 @@ CONSENT,
      * Phase 4: Halaman AI Evaluation Dashboard (metrik FAR/FRR, audit log).
      */
     'ai_evaluation_dashboard' => env('FEATURE_AI_EVALUATION_DASHBOARD', false),
+    'evaluation' => [
+        'retention_days' => env('COMPETITION_EVALUATION_RETENTION_DAYS', 180),
+        'small_sample_threshold' => 20,
+    ],
     'audit_viewer' => env('FEATURE_COMPETITION_AUDIT_VIEWER', false),
 
     /*

@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             if (config('competition.consent_gate', false)) {
                 require app_path('Competition/Routes/consent.php');
             }
+            if (config('competition.ai_evaluation_dashboard', false)) {
+                require app_path('Competition/Routes/evaluation.php');
+            }
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

@@ -10,6 +10,8 @@ use App\Competition\Events\AbsenRecorded;
 use App\Competition\Listeners\RecordTrustScore;
 use App\Competition\Console\Commands\PurgeTrustScores;
 use App\Competition\Console\Commands\PurgeLivenessData;
+use App\Competition\Console\Commands\ImportEvaluationTrials;
+use App\Competition\Console\Commands\ExportEvaluationSnapshot;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,7 +28,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->commands([PurgeTrustScores::class, PurgeLivenessData::class]);
+        $this->commands([
+            PurgeTrustScores::class,
+            PurgeLivenessData::class,
+            ImportEvaluationTrials::class,
+            ExportEvaluationSnapshot::class,
+        ]);
 
         // [DIGIFEST 2026] Daftarkan event listener Trust Engine
         // Hanya aktif jika FEATURE_TRUST_ENGINE_SHADOW=true — tidak ada efek jika false
