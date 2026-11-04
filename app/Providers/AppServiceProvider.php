@@ -5,6 +5,9 @@ namespace App\Providers;
 use Carbon\Carbon;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Event;
+use App\Competition\Events\AbsenRecorded;
+use App\Competition\Listeners\RecordTrustScore;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // [DIGIFEST 2026] Daftarkan event listener Trust Engine
+        // Hanya aktif jika FEATURE_TRUST_ENGINE_SHADOW=true — tidak ada efek jika false
+        if (config('competition.trust_engine_shadow', false)) {
+            Event::listen(AbsenRecorded::class, RecordTrustScore::class);
+        }
+
         // Suppress deprecated PDO::MYSQL_ATTR_SSL_CA warning di PHP 8.5+
         if (PHP_VERSION_ID >= 80500) {
             set_error_handler(function ($errno, $errstr) {
