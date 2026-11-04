@@ -1,89 +1,114 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# E-Presensi — AI Web Innovation Challenge, Bali DigiFest 2026
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Project Name
 
-## About Laravel
+**E-Presensi — Liveness-Aware Attendance Trust Layer (competition prototype)**
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Description
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+E-Presensi is a Laravel attendance application for school students and administrators. This competition branch preserves the client's existing attendance workflows and adds an optional, feature-flagged Trust Engine in shadow mode. The Trust Engine records a rule-based score after a successful attendance request; in the current phase it does not change the attendance decision.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+The client's original Laravel starter README is preserved at [docs/README.client.md](docs/README.client.md).
 
-## Learning Laravel
+## Problem & Target User
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Schools need a practical way to record student arrival/departure and review attendance. The existing application serves students who record attendance and school staff who manage students and review attendance reports. The competition prototype explores additional integrity signals without replacing the client's attendance system.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Key Features
 
-## Laravel Sponsors
+- Existing GPS/geofence and photo attendance workflows.
+- Existing browser-based face recognition attendance and student face enrollment.
+- Student and administrator authentication, student/jurusan management, and attendance reports.
+- Optional shadow Trust Engine that records derived face/GPS/attendance-consistency scores.
+- Competition-only synthetic student/attendance seeder and trust-score retention purge command.
+- Competition flags default to `false`; the competition features are not enabled by default.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Tech Stack
 
-### Premium Partners
+- PHP 8.2+ and Laravel 12.
+- Blade templates and JavaScript.
+- face-api.js 0.22.2 for pre-existing, browser-side face detection, descriptors, and matching.
+- SQLite in-memory for automated tests; deployment database is environment-configured.
+- Vite for frontend asset builds.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## AI Implementation
 
-## Contributing
+The pre-existing face recognition uses face-api.js in the browser to extract 128-value face descriptors and compare them using Euclidean distance. It is not a server-side face model.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+The competition Trust Engine in Phase 2 is **rule-based scoring**, not a trained or generative AI model. It calculates component scores from face distance, GPS validity/geofence distance, and attendance-time consistency. In shadow mode, it stores a score only after an existing attendance request succeeds; it does not accept or reject attendance.
 
-## Code of Conduct
+**Phase 3 liveness challenge-response is planned but not implemented.** No liveness guarantee is claimed in this release.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+AI coding assistance used: **GitHub Copilot (Copilot SDK in VS Code)**. The generated/assisted changes were reviewed and tested before this local commit.
 
-## Security Vulnerabilities
+## Architecture / Data Flow
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+1. A student authenticates with the existing student guard.
+2. The existing attendance controller validates the submitted face match / GPS location and records attendance using the existing workflow.
+3. If `FEATURE_TRUST_ENGINE_SHADOW=true`, middleware observes a successful response and dispatches a Trust Engine event in `terminate()`, after the response is sent.
+4. The listener calculates rule-based scores and writes a record to `competition_trust_scores`; failures are logged and do not rewrite the attendance response.
+5. Trust `raw_signals` stores derived distance, GPS accuracy, and time difference, not raw coordinates.
 
-## License
+The competition score is an advisory evaluation signal. Existing attendance storage still follows the client's existing behavior.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Run Instructions
 
-## Digifest competition instance
+Requirements: PHP 8.2+, Composer, and Node.js/npm for frontend builds.
 
-Seed only the synthetic competition dataset on the isolated competition instance:
+```powershell
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+php artisan migrate
+npm install
+npm run build
+php artisan serve
+```
+
+For an isolated competition database, run **only** the synthetic seeder:
 
 ```powershell
 php artisan db:seed --class=CompetitionSyntheticSeeder
 ```
 
-Do not run `php artisan db:seed` without a class on that instance. The existing `DatabaseSeeder` invokes the client `SiswaSeeder` and also creates a default admin account. Set `COMPETITION_DEMO_PASSWORD` as a private instance environment variable, or leave it empty to generate a random demo password that is printed once by the seeder. Judge credentials must be provided through the organizers' form, never committed to this public repository.
+Do not run `php artisan db:seed` without a class on the competition instance: the existing `DatabaseSeeder` invokes the client `SiswaSeeder` and creates a default admin account. Set `COMPETITION_DEMO_PASSWORD` in the private instance environment or leave it empty to generate a random demo password, printed once during seeding. Never commit or publish demo credentials.
 
-Trust score retention defaults to 90 days. Preview and purge expired records with:
+All competition feature flags default to `false`. Enable competition flags only on a separate competition instance, never on client production.
 
-```powershell
-php artisan competition:purge-trust-scores --days=90 --dry-run
-php artisan competition:purge-trust-scores --days=90
-```
-
-`COMPETITION_DISCLOSURE.md` documents the competition data, privacy, and retention details.
-
-## Tests
-
-Run the configured suites separately:
+Run tests by suite:
 
 ```powershell
 php artisan test --testsuite=Unit
 php artisan test --testsuite=Feature
 ```
 
-`phpunit.xml` also references a `DeployFix` suite, but the `tests/DeployFix` directory is not present in this repository; running the unfiltered suite therefore fails before executing the available tests.
+The PHPUnit configuration references `tests/DeployFix`, which is absent from this repository; the unfiltered suite fails because that directory is missing.
+
+## Deployment URL
+
+Not published. No competition deployment URL is configured in this repository.
+
+## Demo Account
+
+Synthetic student accounts are created by `CompetitionSyntheticSeeder` with NISN values using the `9999` prefix. Demo passwords are supplied through the private `COMPETITION_DEMO_PASSWORD` environment setting or generated once during seeding. **No password is included in this repository.** Judge credentials will be provided by the organizers through their form.
+
+## Known Limitations
+
+- Phase 2 Trust Engine is shadow-only and rule-based; it is not an ML model and does not change the existing attendance decision.
+- Phase 3 liveness challenge-response and manual review workflow are not implemented.
+- Existing face matching runs in the browser. The current system does not establish cryptographic proof that a live person, rather than a replay/injected camera feed, produced client-side signals.
+- GPS checks depend on browser/device location and the existing server-side geofence validation.
+- `phpunit.xml` references an absent `tests/DeployFix` suite; run Unit and Feature suites separately.
+- No deployment URL or team-member roster was supplied for this repository.
+
+## Third-party Resources
+
+- Laravel framework: [MIT license](https://github.com/laravel/framework/blob/12.x/LICENSE.md).
+- face-api.js 0.22.2: [repository and license](https://github.com/justadudewhohacks/face-api.js).
+- Tabler UI assets: [Tabler](https://tabler.io/).
+- Leaflet maps and OpenStreetMap tiles: [Leaflet](https://leafletjs.com/) and [OpenStreetMap](https://www.openstreetmap.org/copyright).
+- AI coding assistant: GitHub Copilot (Copilot SDK in VS Code).
+
+## Team Members
+
+Not supplied in the repository; add the authorized team roster before public submission.

@@ -20,7 +20,7 @@
 | Library | Versi | Lisensi | Peran |
 |---------|-------|---------|-------|
 | face-api.js | 0.22.2 | MIT | Face detection & descriptor extraction (client-side) |
-| Laravel | 11.x | MIT | Backend framework |
+| Laravel | 12.x | MIT | Backend framework |
 | TinyFaceDetector | — | MIT (bundled face-api) | Deteksi wajah real-time |
 | FaceRecognitionNet | — | MIT (bundled face-api) | Ekstraksi 128-float descriptor |
 
@@ -63,3 +63,7 @@ FEATURE_ANOMALY_DETECTION=false      # Phase 5
 FEATURE_COMPETITION_MENU=false       # Master switch UI
 ```
 Dengan semua flag `false`, aplikasi berperilaku **identik** dengan versi pesanan klien.
+
+## AI Coding Assistant
+
+Pengembangan dibantu **GitHub Copilot (Copilot SDK in VS Code)**. Perubahan berbantuan AI ditinjau dan diuji sebelum commit. Trust Engine Phase 2 adalah scoring berbasis aturan, bukan model AI terlatih atau generatif. Challenge-response liveness Phase 3 belum diimplementasikan.
