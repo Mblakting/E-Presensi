@@ -13,11 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
             if (config('competition.trust_engine_enforce', false)) {
                 require app_path('Competition/Routes/web.php');
             }
+            if (config('competition.consent_gate', false)) {
+                require app_path('Competition/Routes/consent.php');
+            }
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'auth'  => \App\Http\Middleware\Authenticate::class,
+            'auth' => \App\Http\Middleware\Authenticate::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'trust.engine' => \App\Competition\Http\TrustEngineMiddleware::class,
             'competition.enforce' => \App\Competition\Http\EnforceMiddleware::class,
@@ -30,6 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         if (config('competition.trust_engine_enforce', false)) {
             $middleware->appendToGroup('web', \App\Competition\Http\EnforceMiddleware::class);
+        }
+
+        if (config('competition.consent_gate', false)) {
+            $middleware->appendToGroup('web', \App\Competition\Http\ConsentGateMiddleware::class);
         }
     })
     ->withExceptions(function (Exceptions $exceptions): void {

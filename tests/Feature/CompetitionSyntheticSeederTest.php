@@ -33,6 +33,8 @@ class CompetitionSyntheticSeederTest extends TestCase
             $table->string('lokasi_out')->nullable();
             $table->timestamps();
         });
+        $migration = require base_path('database/migrations/2026_digifest_005_create_competition_consents_table.php');
+        $migration->up();
     }
 
     public function test_empty_password_configuration_generates_and_prints_one_random_password(): void
@@ -44,6 +46,8 @@ class CompetitionSyntheticSeederTest extends TestCase
         $output = Artisan::output();
         $this->assertSame(1, substr_count($output, 'Password demo acak'));
         $this->assertSame(10, DB::table('siswa')->count());
+        $this->assertSame(10, DB::table('competition_consents')->where('status', 'granted')->count());
+        $this->assertSame(0, DB::table('competition_consents')->where('siswa_nisn', 'NOT LIKE', '9999%')->count());
         $this->assertSame(0, DB::table('siswa')->whereRaw("nisn NOT LIKE '9999%'")->count());
         $this->assertSame(1, preg_match('/Password demo acak[^:]*: (\\S+)/', $output, $matches));
 

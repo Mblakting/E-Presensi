@@ -46,9 +46,35 @@ return [
     ],
 
     /*
+     * Phase 4a: Consent gate for face enrollment and attendance.
+     * Keep text_approved false until the draft has been reviewed.
+     */
+    'consent_gate' => env('FEATURE_COMPETITION_CONSENT', false),
+    'consent' => [
+        'version' => 'draft-1',
+        'text_approved' => false,
+        'text' => <<<'CONSENT'
+DRAF PERSETUJUAN PEMROSESAN WAJAH — versi draft-1
+
+Tujuan: fitur ini menggunakan pengenalan wajah sebagai pilihan untuk pendaftaran wajah dan presensi pada instance demonstrasi E-Presensi.
+
+Data yang diproses: representasi numerik (descriptor) wajah dan foto snapshot saat pendaftaran, foto saat presensi wajah, serta data presensi dan lokasi yang diperlukan oleh alur aplikasi. Data biometrik lama disimpan pada tabel siswa milik aplikasi; catatan kompetisi disimpan terpisah.
+
+Retensi: catatan kompetisi seperti challenge, antrean verifikasi, skor, dan audit direncanakan disimpan paling lama 90 hari. Catatan persetujuan terbaru dipertahankan selama pemrosesan wajah masih mungkin; riwayat yang telah digantikan direncanakan disimpan 365 hari. Descriptor, foto, dan presensi pada tabel aplikasi klien tidak dihapus otomatis oleh penarikan persetujuan.
+
+Penarikan persetujuan: admin dapat mencatat penarikan. Setelah tercatat, aplikasi kompetisi akan menghentikan pendaftaran dan pemrosesan presensi wajah untuk NISN tersebut. Untuk meminta penghapusan descriptor atau foto yang sudah tersimpan pada tabel klien, hubungi pengelola agar mengikuti prosedur penghapusan data klien yang berwenang. Presensi non-wajah tetap dapat digunakan sesuai alur yang tersedia.
+
+Kontak pengelola: [isi kontak pengelola sebelum teks ini disetujui].
+
+Teks ini adalah DRAF untuk ditinjau pengguna dan bukan pernyataan bahwa persyaratan hukum telah dipenuhi. Untuk siswa di bawah umur, persetujuan harus mengikuti proses tertulis sekolah atau wali yang berwenang. Jangan gunakan untuk data nyata sebelum teks dan prosesnya ditinjau serta disetujui.
+CONSENT,
+    ],
+
+    /*
      * Phase 4: Halaman AI Evaluation Dashboard (metrik FAR/FRR, audit log).
      */
     'ai_evaluation_dashboard' => env('FEATURE_AI_EVALUATION_DASHBOARD', false),
+    'audit_viewer' => env('FEATURE_COMPETITION_AUDIT_VIEWER', false),
 
     /*
      * Phase 5: Anomaly Detection — deteksi pola bolos/terlambat.

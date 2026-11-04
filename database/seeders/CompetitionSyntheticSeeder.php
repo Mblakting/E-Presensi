@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -48,6 +49,7 @@ class CompetitionSyntheticSeeder extends Seeder
             // Skip jika NISN sudah ada (idempotent)
             if (DB::table('siswa')->where('nisn', $student['nisn'])->exists()) {
                 $skipped++;
+
                 continue;
             }
 
@@ -71,6 +73,33 @@ class CompetitionSyntheticSeeder extends Seeder
         }
         $this->command->info("[DIGIFEST] {$inserted} siswa sintetis dibuat, {$skipped} dilewati (sudah ada).");
         $this->command->info("[DIGIFEST] {$inserted} siswa sintetis dibuat, {$skipped} dilewati (sudah ada).");
+
+        if (Schema::hasTable('competition_consents')) {
+            $text = (string) config('competition.consent.text');
+            $syntheticConsent = [
+                'status' => 'granted',
+                'text_version' => (string) config('competition.consent.version'),
+                'text_hash' => hash('sha256', $text),
+                'actor_type' => 'synthetic_seeder',
+                'actor_id' => 'competition-seeder',
+                'authority_basis' => 'synthetic_data',
+                'recorded_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            foreach ($this->syntheticStudents as $student) {
+                $hasConsent = DB::table('competition_consents')
+                    ->where('siswa_nisn', $student['nisn'])
+                    ->exists();
+                if (! $hasConsent) {
+                    DB::table('competition_consents')->insert([
+                        ...$syntheticConsent,
+                        'siswa_nisn' => $student['nisn'],
+                    ]);
+                }
+            }
+        }
 
         // Buat juga data presensi sintetis untuk demo anomaly detection (Phase 5)
         $this->seedSyntheticAttendance();

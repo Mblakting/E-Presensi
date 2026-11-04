@@ -33,4 +33,29 @@ class CompetitionMigrationRollbackTest extends TestCase
         $this->assertTrue(Schema::hasTable('siswa'));
         $this->assertTrue(Schema::hasTable('presensi'));
     }
+
+    public function test_phase_four_consent_migration_rolls_back_without_touching_client_tables(): void
+    {
+        Schema::create('siswa', function (Blueprint $table): void {
+            $table->string('nisn')->primary();
+        });
+        Schema::create('presensi', function (Blueprint $table): void {
+            $table->id();
+            $table->string('nisn');
+        });
+        $migration = require base_path('database/migrations/2026_digifest_005_create_competition_consents_table.php');
+
+        $migration->up();
+        $this->assertTrue(Schema::hasTable('competition_consents'));
+        $this->assertSame(
+            ['id', 'siswa_nisn', 'status', 'text_version', 'text_hash', 'actor_type', 'actor_id', 'authority_basis', 'recorded_at', 'created_at', 'updated_at'],
+            Schema::getColumnListing('competition_consents')
+        );
+
+        $migration->down();
+
+        $this->assertFalse(Schema::hasTable('competition_consents'));
+        $this->assertTrue(Schema::hasTable('siswa'));
+        $this->assertTrue(Schema::hasTable('presensi'));
+    }
 }
