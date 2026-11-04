@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 use ZipArchive;
 
@@ -26,7 +27,16 @@ class ConsentGateMiddleware
         if (in_array($routeName, ['presensi.face', 'presensi.face.store', 'face.descriptors'], true)) {
             $nisn = (string) Auth::guard('siswa')->id();
             if ($nisn === '' || ! $this->consents->isGranted($nisn)) {
-                return $this->denied($request, 'Persetujuan pemrosesan wajah belum aktif. Gunakan presensi non-wajah atau hubungi pengelola.');
+                $studentConsentAvailable = config('competition.competition_nav', false)
+                    && Route::has('competition.student-consents.index');
+
+                return $this->denied(
+                    $request,
+                    $studentConsentAvailable
+                        ? 'Persetujuan pemrosesan wajah belum aktif. Baca informasi persetujuan atau gunakan presensi non-wajah.'
+                        : 'Persetujuan pemrosesan wajah belum aktif. Gunakan presensi non-wajah atau hubungi pengelola.',
+                    $studentConsentAvailable ? route('competition.student-consents.index') : null
+                );
             }
 
             if ($routeName === 'face.descriptors') {
@@ -147,6 +157,6 @@ class ConsentGateMiddleware
             ], 403);
         }
 
-        return redirect()->route('presensi.create')->with('warning', $message);
+        return redirect()->to($alternative ?? route('presensi.create'))->with('warning', $message);
     }
 }

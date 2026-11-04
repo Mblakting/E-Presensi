@@ -16,6 +16,7 @@
 | **AI Evaluation Dashboard + manual trials** | 🆕 Inovasi lomba | Phase 4b — flag: `FEATURE_AI_EVALUATION_DASHBOARD` |
 | **Competition audit viewer** | 🆕 Inovasi lomba | Phase 4c — flag: `FEATURE_COMPETITION_AUDIT_VIEWER` |
 | **Competition-only synthetic data erasure** | 🆕 Inovasi lomba | Phase 4c — flag: `FEATURE_COMPETITION_DATA_ERASURE` dan consent gate |
+| **Navigasi lomba** | 🆕 Inovasi lomba | Hub dan panduan juri, flag: `FEATURE_COMPETITION_NAV`; tautan disisipkan oleh middleware pada HTML, tanpa mengubah Blade klien |
 
 ## Framework & Library AI
 
@@ -98,6 +99,7 @@ FEATURE_COMPETITION_CONSENT=false
 FEATURE_AI_EVALUATION_DASHBOARD=false
 FEATURE_COMPETITION_AUDIT_VIEWER=false
 FEATURE_COMPETITION_DATA_ERASURE=false
+FEATURE_COMPETITION_NAV=false
 ```
 
 Parameter lain yang dibaca konfigurasi adalah `COMPETITION_DEMO_PASSWORD`, `COMPETITION_CHALLENGE_TTL_SECONDS`, `COMPETITION_TRUST_SCORE_RETENTION_DAYS`, `COMPETITION_LIVENESS_RETENTION_DAYS`, `COMPETITION_AUDIT_RETENTION_DAYS`, `COMPETITION_CONSENT_HISTORY_RETENTION_DAYS`, dan `COMPETITION_EVALUATION_RETENTION_DAYS`. Nilai contoh dan default-nya tercantum di `.env.example` serta tabel retensi di atas. Dengan semua feature flag `false`, aplikasi berperilaku **identik** dengan versi pesanan klien.
@@ -105,7 +107,7 @@ Parameter lain yang dibaca konfigurasi adalah `COMPETITION_DEMO_PASSWORD`, `COMP
 ## Potensi Pengembangan — Belum Diimplementasikan
 
 - Deteksi anomali kehadiran belum tersedia. Belum ada analitik anomali, model, route, atau flag aktif; ide ini tidak termasuk fitur yang dapat digunakan atau dinilai pada versi ini.
-- Menu navigasi kompetisi terpisah belum tersedia; halaman kompetisi dibuka melalui route yang terdaftar ketika flag fiturnya aktif. Tidak ada master flag menu.
+- Deteksi anomali kehadiran belum tersedia; tidak ada analitik anomali atau model yang dapat digunakan atau dinilai pada versi ini.
 
 ## AI Coding Assistant
 

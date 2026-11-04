@@ -8,6 +8,8 @@ use App\Competition\Console\Commands\ImportEvaluationTrials;
 use App\Competition\Console\Commands\PurgeLivenessData;
 use App\Competition\Console\Commands\PurgeTrustScores;
 use App\Competition\Events\AbsenRecorded;
+use App\Competition\Http\CompetitionErrorMiddleware;
+use App\Competition\Http\CompetitionNavigationMiddleware;
 use App\Competition\Listeners\RecordTrustScore;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -53,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
 
         if (config('competition.audit_viewer', false)) {
             $this->loadRoutesFrom(app_path('Competition/Routes/audit.php'));
+        }
+
+        if (config('competition.competition_nav', false)) {
+            $this->loadRoutesFrom(app_path('Competition/Routes/navigation.php'));
         }
 
         $this->commands([
@@ -106,6 +112,11 @@ class AppServiceProvider extends ServiceProvider
 
         if (config('competition.trust_engine_enforce', false)) {
             $this->pushMiddlewareToGroupOnce($router, 'web', \App\Competition\Http\EnforceMiddleware::class);
+        }
+
+        if (config('competition.competition_nav', false)) {
+            $this->pushMiddlewareToGroupOnce($router, 'web', CompetitionErrorMiddleware::class);
+            $this->pushMiddlewareToGroupOnce($router, 'web', CompetitionNavigationMiddleware::class);
         }
     }
 

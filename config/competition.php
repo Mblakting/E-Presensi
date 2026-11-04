@@ -10,6 +10,7 @@
  */
 return [
     'demo_password' => env('COMPETITION_DEMO_PASSWORD'),
+    'competition_nav' => env('FEATURE_COMPETITION_NAV', false),
 
     /*
      * Phase 2: Trust Engine berjalan diam-diam (shadow mode).

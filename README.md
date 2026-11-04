@@ -24,11 +24,18 @@ Schools need a practical way to record student arrival/departure and review atte
 - Optional, versioned consent ledger and face-processing gate for enrollment, descriptors, face attendance, and ZIP enrollment, enabled only by `FEATURE_COMPETITION_CONSENT`.
 - Optional read-only AI Evaluation dashboard for recorded challenge data and manually imported genuine/print/screen trials, enabled only by `FEATURE_AI_EVALUATION_DASHBOARD`.
 - Optional paginated audit viewer, enabled only by `FEATURE_COMPETITION_AUDIT_VIEWER`.
+- Optional competition hub, public judge guide, and injected client navigation, enabled only by `FEATURE_COMPETITION_NAV`.
 - Optional, synthetic-NISN-only competition-data erasure command, enabled only by `FEATURE_COMPETITION_DATA_ERASURE` together with the consent gate.
 - Competition-only synthetic student/attendance seeder and trust/liveness-data retention purge commands.
 - Competition flags default to `false`; the competition features are not enabled by default.
 
-The implemented competition feature flags are `FEATURE_TRUST_ENGINE_SHADOW`, `FEATURE_TRUST_ENGINE_ENFORCE`, `FEATURE_COMPETITION_CONSENT`, `FEATURE_AI_EVALUATION_DASHBOARD`, `FEATURE_COMPETITION_AUDIT_VIEWER`, and `FEATURE_COMPETITION_DATA_ERASURE`. Their defaults and related retention/TTL parameters are listed in [.env.example](.env.example). Anomaly detection and a competition navigation master switch are not implemented and have no active flags.
+The implemented competition feature flags are `FEATURE_TRUST_ENGINE_SHADOW`, `FEATURE_TRUST_ENGINE_ENFORCE`, `FEATURE_COMPETITION_CONSENT`, `FEATURE_AI_EVALUATION_DASHBOARD`, `FEATURE_COMPETITION_AUDIT_VIEWER`, `FEATURE_COMPETITION_DATA_ERASURE`, and `FEATURE_COMPETITION_NAV`. Their defaults and related retention/TTL parameters are listed in [.env.example](.env.example). Anomaly detection is not implemented and has no active flag.
+
+## Panduan Juri
+
+Panduan langkah demi langkah tersedia di [docs/JUDGE_GUIDE.md](docs/JUDGE_GUIDE.md). Jika `FEATURE_COMPETITION_NAV=true`, panduan publik dapat dibuka di `/competition/guide`, sedangkan siswa dan admin yang masuk dapat membuka pusat fitur di `/competition`. Menu “Fitur Lomba” disisipkan oleh middleware pada respons HTML saja; Blade klien tidak diubah. Jika flag mati, menu dan rute panduan/hub tidak aktif.
+
+Untuk demo terpisah, siapkan data sintetis saja (NISN berawalan `9999`) dan atur flag yang diperlukan di environment privat deployment. Flag navigasi tidak mengaktifkan Trust Engine, consent, audit, atau dashboard dengan sendirinya. Consent tetap nonaktif sampai teks draf ditinjau dan disetujui. Jangan aktifkan `FEATURE_TRUST_ENGINE_ENFORCE` sebelum menyiapkan demo terkontrol dan jalur cadangan.
 
 ## Tech Stack
 

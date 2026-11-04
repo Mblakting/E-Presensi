@@ -68,7 +68,9 @@ class ConsentService
     public function record(
         string $nisn,
         string $status,
-        ?string $authorityBasis = null
+        ?string $authorityBasis = null,
+        string $actorType = 'admin',
+        ?string $actorId = null
     ): ConsentRecord {
         $text = (string) config('competition.consent.text');
 
@@ -77,8 +79,8 @@ class ConsentService
             'status' => $status,
             'text_version' => (string) config('competition.consent.version'),
             'text_hash' => hash('sha256', $text),
-            'actor_type' => 'admin',
-            'actor_id' => (string) auth('user')->id(),
+            'actor_type' => $actorType,
+            'actor_id' => $actorId ?? (string) auth('user')->id(),
             'authority_basis' => $authorityBasis,
             'recorded_at' => now(),
         ]);
