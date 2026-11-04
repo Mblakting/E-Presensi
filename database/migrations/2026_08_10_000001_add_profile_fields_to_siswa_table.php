@@ -10,31 +10,33 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('siswa', function (Blueprint $table) {
-            if (!Schema::hasColumn('siswa', 'no_hp')) {
+            if (! Schema::hasColumn('siswa', 'no_hp')) {
                 $table->string('no_hp', 20)->nullable()->after('kelas');
             }
 
-            if (!Schema::hasColumn('siswa', 'alamat')) {
+            if (! Schema::hasColumn('siswa', 'alamat')) {
                 $table->text('alamat')->nullable()->after('no_hp');
             }
 
-            if (!Schema::hasColumn('siswa', 'nama_orang_tua')) {
+            if (! Schema::hasColumn('siswa', 'nama_orang_tua')) {
                 $table->string('nama_orang_tua', 100)->nullable()->after('alamat');
             }
 
-            if (!Schema::hasColumn('siswa', 'foto')) {
+            if (! Schema::hasColumn('siswa', 'foto')) {
                 $table->string('foto')->nullable()->after('nama_orang_tua');
             }
         });
 
-        // Hanya drop FK jika benar-benar ada (struktur DB lama vs baru berbeda)
-        $foreignKeys = collect(
-            DB::select("SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+        $foreignKeys = DB::getDriverName() === 'mysql'
+            ? collect(DB::select(
+                "SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
                 WHERE TABLE_SCHEMA = DATABASE()
                 AND TABLE_NAME = 'siswa'
                 AND REFERENCED_TABLE_NAME IS NOT NULL
-                AND COLUMN_NAME = 'kode_jurusan'")
-        )->pluck('CONSTRAINT_NAME');
+                AND COLUMN_NAME = 'kode_jurusan'"
+            ))->pluck('CONSTRAINT_NAME')
+            : collect(Schema::getForeignKeys('siswa'))
+                ->filter(fn (array $foreignKey): bool => in_array('kode_jurusan', $foreignKey['columns'], true));
 
         if ($foreignKeys->isNotEmpty()) {
             Schema::table('siswa', function (Blueprint $table) {
