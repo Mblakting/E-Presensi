@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * [DIGIFEST 2026 - SYNTHETIC DATA ONLY]
@@ -41,6 +42,7 @@ class CompetitionSyntheticSeeder extends Seeder
 
         $inserted = 0;
         $skipped  = 0;
+        $demoPassword = null;
 
         foreach ($this->syntheticStudents as $student) {
             // Skip jika NISN sudah ada (idempotent)
@@ -49,19 +51,26 @@ class CompetitionSyntheticSeeder extends Seeder
                 continue;
             }
 
+            if ($demoPassword === null) {
+                $configuredPassword = config('competition.demo_password');
+                $demoPassword = $configuredPassword ?: Str::password(24);
+                if (!$configuredPassword) {
+                    $this->command->warn('[DIGIFEST] Password demo acak (simpan sekarang, tidak akan ditampilkan lagi): ' . $demoPassword);
+                }
+            }
+
             DB::table('siswa')->insert([
                 'nisn'         => $student['nisn'],
                 'nama_lengkap' => $student['nama_lengkap'],
                 'kelas'        => $student['kelas'],
-                'password'     => Hash::make('demo1234'),
+                'password'     => Hash::make($demoPassword),
                 'created_at'   => now(),
                 'updated_at'   => now(),
             ]);
             $inserted++;
         }
-
         $this->command->info("[DIGIFEST] {$inserted} siswa sintetis dibuat, {$skipped} dilewati (sudah ada).");
-        $this->command->info('[DIGIFEST] Password default semua akun demo: demo1234');
+        $this->command->info("[DIGIFEST] {$inserted} siswa sintetis dibuat, {$skipped} dilewati (sudah ada).");
 
         // Buat juga data presensi sintetis untuk demo anomaly detection (Phase 5)
         $this->seedSyntheticAttendance();

@@ -35,6 +35,7 @@ class RecordTrustScore
             tglPresensi: $event->tglPresensi,
             jamAbsen:    $event->jamAbsen,
             isShadow:    $isShadow,
+            gpsAccuracy: $event->gpsAccuracy,
         );
 
         Log::info('[TrustEngine][Shadow] NISN=' . $event->nisn

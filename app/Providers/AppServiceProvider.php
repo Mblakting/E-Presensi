@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Event;
 use App\Competition\Events\AbsenRecorded;
 use App\Competition\Listeners\RecordTrustScore;
+use App\Competition\Console\Commands\PurgeTrustScores;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->commands([PurgeTrustScores::class]);
+
         // [DIGIFEST 2026] Daftarkan event listener Trust Engine
         // Hanya aktif jika FEATURE_TRUST_ENGINE_SHADOW=true — tidak ada efek jika false
         if (config('competition.trust_engine_shadow', false)) {

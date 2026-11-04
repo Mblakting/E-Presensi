@@ -19,6 +19,7 @@ class AbsenRecorded
         public readonly string  $method,       // 'face' | 'gps'
         public readonly ?float  $faceDistance, // Euclidean distance (null jika GPS)
         public readonly ?string $lokasi,       // "lat,lon"
+        public readonly ?float  $gpsAccuracy,
         public readonly string  $tglPresensi,
         public readonly string  $jamAbsen,
     ) {}

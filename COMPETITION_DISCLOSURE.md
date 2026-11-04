@@ -26,11 +26,24 @@
 
 ## Data & Privasi
 
-- **Data demo:** 100% sintetis. NISN prefix `9999` = jelas fiktif.
+- **Data demo:** data siswa pada `CompetitionSyntheticSeeder` sintetis. NISN prefix `9999` digunakan untuk data demo tersebut.
+- **Data pribadi:** NISN tetap merupakan data pribadi walaupun NISN demo bersifat sintetis. Trust score mengaitkan NISN dengan skor/verdict.
+- **Sinyal lokasi/waktu:** validasi presensi lama tetap menyimpan lokasi sesuai perilaku klien. Trust Engine tidak menyimpan koordinat mentah pada `raw_signals`; ia hanya menyimpan jarak hasil perhitungan dari lokasi sekolah, akurasi GPS, dan selisih waktu hasil perhitungan. Nilai-nilai turunan tersebut tetap dapat menjadi data pribadi ketika dikaitkan dengan NISN.
 - **Foto siswa:** Tidak ada foto nyata di instance lomba.
 - **Face descriptor:** Dihitung di browser (client-side), tidak ada foto yang dikirim ke server saat matching.
 - **Penyimpanan:** Face descriptor disimpan sebagai JSON array 128-float di kolom `siswa.face_descriptor`.
-- **Retensi:** Data demo dihapus setelah periode evaluasi lomba.
+- **Tujuan:** trust score dan sinyal turunannya dipakai untuk evaluasi integritas presensi secara shadow; skor tidak mengubah hasil presensi pada Phase 2.
+- **Retensi:** trust score lebih lama dari 90 hari dapat dihapus dengan `php artisan competition:purge-trust-scores --days=90`. Tinjau dahulu memakai `--dry-run`; jalankan purge berkala pada instance lomba dan hapus seluruh data demo setelah evaluasi.
+
+## Seeding Instance Lomba
+
+Jalankan hanya seeder sintetis yang khusus untuk lomba:
+
+```powershell
+php artisan db:seed --class=CompetitionSyntheticSeeder
+```
+
+Jangan jalankan `php artisan db:seed` tanpa class pada instance lomba: `DatabaseSeeder` memanggil `SiswaSeeder` lama dan membuat akun admin default. Atur `COMPETITION_DEMO_PASSWORD` melalui environment instance yang privat, atau biarkan kosong agar seeder membuat password acak dan mencetaknya sekali saat seeding. Kredensial juri harus disalurkan melalui form panitia, bukan disimpan di repository.
 
 ## Disclaimer AI
 

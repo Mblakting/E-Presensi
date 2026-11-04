@@ -9,6 +9,7 @@
  * JANGAN set true di .env production klien.
  */
 return [
+    'demo_password' => env('COMPETITION_DEMO_PASSWORD'),
 
     /*
      * Phase 2: Trust Engine berjalan diam-diam (shadow mode).

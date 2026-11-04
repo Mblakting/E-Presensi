@@ -14,11 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth'  => \App\Http\Middleware\Authenticate::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-            // [DIGIFEST 2026] Trust Engine interceptor — hanya aktif jika flag shadow=true
             'trust.engine' => \App\Competition\Http\TrustEngineMiddleware::class,
         ]);
 
-        // Pasang middleware ke route absen secara kondisional
+        // [DIGIFEST 2026] Interceptor hanya aktif jika shadow mode diaktifkan.
         if (config('competition.trust_engine_shadow', false)) {
             $middleware->appendToGroup('web', \App\Competition\Http\TrustEngineMiddleware::class);
         }

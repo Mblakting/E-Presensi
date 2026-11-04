@@ -30,7 +30,7 @@ return new class extends Migration
 
             $table->string('verdict', 20)->default('pending'); // 'accepted'|'queued'|'rejected'
             $table->text('reason')->nullable();                // alasan penolakan/antrean
-            $table->json('raw_signals')->nullable();           // data mentah untuk audit
+            $table->json('raw_signals')->nullable();           // sinyal turunan; koordinat mentah tidak disimpan
 
             // Apakah skor ini mempengaruhi hasil absen (enforce mode) atau hanya shadow
             $table->boolean('is_shadow')->default(true);

@@ -57,3 +57,33 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Digifest competition instance
+
+Seed only the synthetic competition dataset on the isolated competition instance:
+
+```powershell
+php artisan db:seed --class=CompetitionSyntheticSeeder
+```
+
+Do not run `php artisan db:seed` without a class on that instance. The existing `DatabaseSeeder` invokes the client `SiswaSeeder` and also creates a default admin account. Set `COMPETITION_DEMO_PASSWORD` as a private instance environment variable, or leave it empty to generate a random demo password that is printed once by the seeder. Judge credentials must be provided through the organizers' form, never committed to this public repository.
+
+Trust score retention defaults to 90 days. Preview and purge expired records with:
+
+```powershell
+php artisan competition:purge-trust-scores --days=90 --dry-run
+php artisan competition:purge-trust-scores --days=90
+```
+
+`COMPETITION_DISCLOSURE.md` documents the competition data, privacy, and retention details.
+
+## Tests
+
+Run the configured suites separately:
+
+```powershell
+php artisan test --testsuite=Unit
+php artisan test --testsuite=Feature
+```
+
+`phpunit.xml` also references a `DeployFix` suite, but the `tests/DeployFix` directory is not present in this repository; running the unfiltered suite therefore fails before executing the available tests.

@@ -3,8 +3,10 @@
 namespace App\Competition\Services;
 
 use App\Competition\Models\TrustScore;
+use App\Models\SchoolSetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * [DIGIFEST 2026] Trust Engine Service
@@ -44,12 +46,14 @@ class TrustEngineService
         ?string $lokasi,
         string  $tglPresensi,
         string  $jamAbsen,
-        bool    $isShadow = true
+        bool    $isShadow = true,
+        ?float  $gpsAccuracy = null
     ): array {
         try {
             $scoreFace        = $this->scoreFaceDistance($faceDistance, $method);
             $scoreGps         = $this->scoreGps($lokasi);
-            $scoreConsistency = $this->scoreConsistency($nisn, $tglPresensi, $jamAbsen);
+            $geofenceDistance = $this->geofenceDistance($lokasi);
+            [$scoreConsistency, $timeDifference] = $this->scoreConsistency($nisn, $tglPresensi, $jamAbsen);
 
             $total   = $scoreFace + $scoreGps + $scoreConsistency;
             $verdict = $this->verdict($total);
@@ -66,10 +70,9 @@ class TrustEngineService
                 'verdict'             => $verdict,
                 'reason'              => $reason,
                 'raw_signals'         => [
-                    'face_distance' => $faceDistance,
-                    'lokasi'        => $lokasi,
-                    'jam_absen'     => $jamAbsen,
-                    'method'        => $method,
+                    'geofence_distance_meters' => $geofenceDistance,
+                    'gps_accuracy_meters' => $gpsAccuracy,
+                    'time_difference_minutes' => $timeDifference,
                 ],
                 'is_shadow' => $isShadow,
             ]);
@@ -118,30 +121,66 @@ class TrustEngineService
      */
     private function scoreGps(?string $lokasi): int
     {
-        if (empty($lokasi)) return 0;
-
-        $parts = explode(',', $lokasi);
-        if (count($parts) !== 2) return 0;
-
-        $lat = (float) trim($parts[0]);
-        $lon = (float) trim($parts[1]);
-
-        // Koordinat 0,0 = tidak valid (default browser saat GPS gagal)
-        if ($lat === 0.0 && $lon === 0.0) return 0;
-
-        // Koordinat di luar range valid
-        if ($lat < -90 || $lat > 90 || $lon < -180 || $lon > 180) return 0;
+        $coordinates = $this->coordinates($lokasi);
+        if ($coordinates === null || ($coordinates[0] === 0.0 && $coordinates[1] === 0.0)) return 0;
 
         // Koordinat valid → skor penuh
         // (validasi radius sudah dilakukan di HasversineDistance, tidak perlu duplikasi)
         return 40;
     }
 
+    private function geofenceDistance(?string $lokasi): ?float
+    {
+        $coordinates = $this->coordinates($lokasi);
+        if ($coordinates === null || ($coordinates[0] === 0.0 && $coordinates[1] === 0.0)) {
+            return null;
+        }
+
+        $school = Schema::hasTable('school_settings')
+            ? SchoolSetting::query()->first()
+            : null;
+        $schoolLatitude = $school ? (float) $school->latitude : (float) config('school.latitude', -7.671325);
+        $schoolLongitude = $school ? (float) $school->longitude : (float) config('school.longitude', 110.589607);
+
+        return round($this->distance($schoolLatitude, $schoolLongitude, $coordinates[0], $coordinates[1]), 2);
+    }
+
+    private function coordinates(?string $lokasi): ?array
+    {
+        if ($lokasi === null || $lokasi === '') {
+            return null;
+        }
+
+        $parts = explode(',', $lokasi);
+        if (count($parts) !== 2 || !is_numeric(trim($parts[0])) || !is_numeric(trim($parts[1]))) {
+            return null;
+        }
+
+        $latitude = (float) trim($parts[0]);
+        $longitude = (float) trim($parts[1]);
+        if ($latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
+            return null;
+        }
+
+        return [$latitude, $longitude];
+    }
+
+    private function distance(float $latitude1, float $longitude1, float $latitude2, float $longitude2): float
+    {
+        $earthRadius = 6371000;
+        $latitudeDelta = deg2rad($latitude2 - $latitude1);
+        $longitudeDelta = deg2rad($longitude2 - $longitude1);
+        $a = sin($latitudeDelta / 2) ** 2
+            + cos(deg2rad($latitude1)) * cos(deg2rad($latitude2)) * sin($longitudeDelta / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
     /**
      * Skor konsistensi historis: 0-20 poin.
      * Cek apakah jam absen konsisten dengan pola 7 hari terakhir.
      */
-    private function scoreConsistency(string $nisn, string $tglPresensi, string $jamAbsen): int
+    private function scoreConsistency(string $nisn, string $tglPresensi, string $jamAbsen): array
     {
         try {
             // Ambil 7 record absen terakhir (tidak termasuk hari ini)
@@ -153,7 +192,7 @@ class TrustEngineService
                 ->limit(7)
                 ->pluck('jam_in');
 
-            if ($history->count() < 3) return 15; // data tidak cukup → skor netral
+            if ($history->isEmpty()) return [15, null];
 
             // Hitung rata-rata jam masuk dalam menit
             $avgMinutes = $history->map(function ($jam) {
@@ -167,14 +206,16 @@ class TrustEngineService
 
             $diff = abs($nowMinutes - $avgMinutes);
 
+            if ($history->count() < 3) return [15, round($diff, 2)];
+
             // Dalam 30 menit dari rata-rata → konsisten
-            if ($diff <= 30)  return 20;
-            if ($diff <= 60)  return 15;
-            if ($diff <= 120) return 10;
-            return 5; // sangat tidak konsisten
+            if ($diff <= 30)  return [20, round($diff, 2)];
+            if ($diff <= 60)  return [15, round($diff, 2)];
+            if ($diff <= 120) return [10, round($diff, 2)];
+            return [5, round($diff, 2)]; // sangat tidak konsisten
 
         } catch (\Throwable $e) {
-            return 10; // fallback netral
+            return [10, null]; // fallback netral
         }
     }
 

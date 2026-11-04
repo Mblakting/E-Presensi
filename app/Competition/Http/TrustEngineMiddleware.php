@@ -13,32 +13,31 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Cara kerja:
  * 1. Request lewat → controller lama berjalan normal → response dibuat
- * 2. Middleware intercept response SETELAH controller selesai
- * 3. Jika response adalah absen sukses → dispatch AbsenRecorded event
+ * 2. Middleware menandai response absen sukses
+ * 3. Event di-dispatch dari terminate(), setelah response dikirim
  * 4. Response ke user TIDAK berubah sama sekali
  *
  * Controller FaceRecognitionController dan PresensiController TIDAK disentuh.
  */
 class TrustEngineMiddleware
 {
+    private const EVENT_DATA_ATTRIBUTE = 'competition.trust_engine_event';
+
     public function handle(Request $request, Closure $next): Response
     {
         /** @var Response $response */
         $response = $next($request);
 
-        // Hanya proses jika flag aktif
         if (!config('competition.trust_engine_shadow', false)) {
             return $response;
         }
 
-        // Hanya proses route absen
         $routeName = $request->route()?->getName();
         if (!in_array($routeName, ['presensi.store', 'presensi.face.store'])) {
             return $response;
         }
 
-        // Hanya proses jika response sukses
-        if (!($response instanceof JsonResponse)) {
+        if (! $response instanceof JsonResponse) {
             return $response;
         }
 
@@ -47,35 +46,47 @@ class TrustEngineMiddleware
             return $response;
         }
 
-        // Ekstrak sinyal dari request
-        try {
-            $isFace      = $routeName === 'presensi.face.store';
-            $method      = $isFace ? 'face' : 'gps';
-            $absenType   = $data['type'] ?? 'in';
-            $lokasi      = $request->input('lokasi', '');
-            $faceDistance = $isFace ? (float) $request->input('confidence', 0.55) : null;
+        $isFace = $routeName === 'presensi.face.store';
+        $nisn = $isFace
+            ? (string) $request->input('nisn_match', '')
+            : (string) \Illuminate\Support\Facades\Auth::guard('siswa')->id();
 
-            $nisn = $isFace
-                ? (string) $request->input('nisn_match', '')
-                : (string) \Illuminate\Support\Facades\Auth::guard('siswa')->id();
-
-            if (empty($nisn)) return $response;
-
-            AbsenRecorded::dispatch(
-                nisn:         $nisn,
-                absenType:    $absenType,
-                method:       $method,
-                faceDistance: $faceDistance,
-                lokasi:       $lokasi,
-                tglPresensi:  now()->toDateString(),
-                jamAbsen:     now()->format('H:i:s'),
-            );
-
-        } catch (\Throwable $e) {
-            // Middleware TIDAK BOLEH crash dan mengganggu response
-            \Illuminate\Support\Facades\Log::warning('[TrustEngine] Middleware error: ' . $e->getMessage());
+        if ($nisn === '') {
+            return $response;
         }
 
+        $accuracy = $request->input('gps_accuracy', $request->input('accuracy'));
+        $request->attributes->set(self::EVENT_DATA_ATTRIBUTE, [
+            'nisn' => $nisn,
+            'absenType' => $data['type'] ?? 'in',
+            'method' => $isFace ? 'face' : 'gps',
+            'faceDistance' => $isFace ? (float) $request->input('confidence', 0.55) : null,
+            'lokasi' => $request->input('lokasi'),
+            'gpsAccuracy' => is_numeric($accuracy) && is_finite((float) $accuracy) && (float) $accuracy >= 0
+                ? (float) $accuracy
+                : null,
+            'tglPresensi' => now()->toDateString(),
+            'jamAbsen' => now()->format('H:i:s'),
+        ]);
+
         return $response;
+    }
+
+    public function terminate(Request $request, Response $response): void
+    {
+        if (!config('competition.trust_engine_shadow', false)) {
+            return;
+        }
+
+        $eventData = $request->attributes->get(self::EVENT_DATA_ATTRIBUTE);
+        if (!is_array($eventData)) {
+            return;
+        }
+
+        try {
+            event(new AbsenRecorded(...$eventData));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[TrustEngine] Middleware error: ' . $e->getMessage());
+        }
     }
 }
