@@ -36,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->loadViewsFrom(app_path('Competition/Resources/views'), 'competition');
+
         $router = $this->app->make(Router::class);
         $this->configureCompetitionMiddleware($router);
         $this->app->afterResolving(HttpKernel::class, function () use ($router): void {

@@ -5,11 +5,8 @@ use App\Competition\Http\LivenessScriptController;
 use App\Competition\Http\ManualVerificationController;
 use App\Competition\Http\ReviewQueueController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\View;
 
 Route::middleware('web')->group(function (): void {
-    View::addNamespace('competition', app_path('Competition/Resources/views'));
-
     Route::middleware('auth:siswa')->group(function (): void {
         Route::post('/competition/liveness/challenge', [ChallengeController::class, 'issue'])
             ->middleware('throttle:10,1')
