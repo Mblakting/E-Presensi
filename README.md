@@ -73,7 +73,15 @@ Phase 4 adds a consent ledger and conditional gate without changing client contr
 
 The AI Evaluation dashboard is a read-only report, not a model or a performance claim. It computes FAR/FRR only from imported, actually recorded trials; review is separate from the decided denominator. The repository snapshot is currently header-only with `n=0`, so no FAR, FRR, or attack-rejection rate is claimed. Import and export instructions are in [the Phase 4 manual guide](docs/PHASE4_MANUAL_TEST.md).
 
-AI coding assistance used: **GitHub Copilot (Copilot SDK in VS Code)**. The generated/assisted changes were reviewed and tested before this local commit.
+### AI & Technology Disclosure
+
+| Tool | Role in this project |
+|------|----------------------|
+| GitHub Copilot (coding agent in VS Code) | Wrote and tested competition-feature code on this branch. |
+| Claude (Anthropic) | Analyzed ideas and specifications, drafted prompts for coding agents, and reviewed reports; it is not connected to the application runtime. |
+| Other AI tools | Not confirmed by the available project history and materials; add each tool and its role if the team used one. |
+
+Seluruh perubahan ditinjau dan diuji oleh tim sebelum commit; runtime fitur lomba tidak memanggil model AI eksternal (aturan berbasis skor).
 
 ## Architecture / Data Flow
 
@@ -166,7 +174,7 @@ The original attendance/authentication, GPS/geofence, photo, and browser-based f
 - face-api.js 0.22.2: [repository and license](https://github.com/justadudewhohacks/face-api.js).
 - Tabler UI assets: [Tabler](https://tabler.io/).
 - Leaflet maps and OpenStreetMap tiles: [Leaflet](https://leafletjs.com/) and [OpenStreetMap](https://www.openstreetmap.org/copyright).
-- AI coding assistant: GitHub Copilot (Copilot SDK in VS Code).
+- AI-tool roles are disclosed in the [AI & Technology Disclosure](COMPETITION_DISCLOSURE.md#ai-technology-disclosure) table and in [COMPETITION_DISCLOSURE.md](COMPETITION_DISCLOSURE.md).
 
 ## Team Members
 

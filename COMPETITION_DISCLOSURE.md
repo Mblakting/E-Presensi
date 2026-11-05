@@ -30,7 +30,15 @@
 | TinyFaceDetector | — | MIT (bundled face-api) | Deteksi wajah real-time |
 | FaceRecognitionNet | — | MIT (bundled face-api) | Ekstraksi 128-float descriptor |
 
-Alat AI untuk membantu pengembangan: GitHub Copilot (Copilot SDK in VS Code). Tidak ada model AI terlatih/generatif yang menjadi bagian dari runtime fitur kompetisi; scoring dan challenge adalah aturan.
+## AI & Technology Disclosure
+
+| Alat | Peran dalam proyek |
+|------|--------------------|
+| GitHub Copilot (agen koding di VS Code) | Menulis dan menguji kode fitur lomba di branch ini. |
+| Claude (Anthropic) | Analisis ide, spesifikasi, penulisan prompt untuk agen koding, dan peninjauan laporan; tidak terhubung ke runtime aplikasi. |
+| Alat AI lain | Belum terkonfirmasi dari riwayat dan materi proyek yang tersedia; lengkapi dengan nama alat dan perannya jika tim menggunakannya. |
+
+Seluruh perubahan ditinjau dan diuji oleh tim sebelum commit; runtime fitur lomba tidak memanggil model AI eksternal (aturan berbasis skor).
 
 ## Data & Privasi
 
@@ -120,7 +128,7 @@ Parameter lain yang dibaca konfigurasi adalah `COMPETITION_DEMO_PASSWORD`, `COMP
 
 ## AI Coding Assistant
 
-Pengembangan dibantu **GitHub Copilot (Copilot SDK in VS Code)**; tidak ada alat AI lain yang digunakan untuk menghasilkan kode atau materi proyek. Perubahan berbantuan AI ditinjau dan diuji sebelum commit. Trust Engine Phase 2 dan liveness challenge Phase 3a adalah pemrosesan berbasis aturan, bukan model AI terlatih atau generatif. Verifikasi jarak descriptor wajah di server belum diimplementasikan; antrean review manual Phase 3b adalah fitur human-in-the-loop yang terpisah.
+Rincian alat AI yang membantu pengembangan tercantum pada tabel **AI & Technology Disclosure** di atas. Trust Engine Phase 2 dan liveness challenge Phase 3a adalah pemrosesan berbasis aturan, bukan model AI terlatih atau generatif. Verifikasi jarak descriptor wajah di server belum diimplementasikan; antrean review manual Phase 3b adalah fitur human-in-the-loop yang terpisah.
 
 ## File Klien Lama yang Dimodifikasi
 
