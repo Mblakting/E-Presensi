@@ -45,6 +45,20 @@ class CompetitionNavigationMiddlewareTest extends TestCase
         $this->assertSame(1, substr_count($secondResponse->getContent(), 'data-competition-navigation'));
     }
 
+    public function test_admin_gets_one_floating_link_even_when_tabler_navigation_exists(): void
+    {
+        config(['competition.competition_nav' => true]);
+        $html = '<html><body><ul class="navbar-nav"><li>Admin menu</li></ul><main>Admin page</main></body></html>';
+
+        $response = $this->runMiddleware(Request::create('/panel/dashboardadmin'), $html);
+        $content = (string) $response->getContent();
+
+        $this->assertSame(1, substr_count($content, 'data-competition-navigation'));
+        $this->assertSame(1, substr_count($content, 'href="'.url('/competition').'"'));
+        $this->assertStringContainsString('position:fixed', $content);
+        $this->assertStringContainsString('Fitur Lomba', $content);
+    }
+
     public function test_non_html_json_ajax_redirect_and_download_responses_are_unchanged(): void
     {
         config(['competition.competition_nav' => true]);

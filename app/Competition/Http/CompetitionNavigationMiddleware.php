@@ -16,8 +16,11 @@ class CompetitionNavigationMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
+        $isAdmin = Auth::guard('user')->check();
+        $isStudent = Auth::guard('siswa')->check();
+
         if (! config('competition.competition_nav', false)
-            || (! Auth::guard('user')->check() && ! Auth::guard('siswa')->check())
+            || (! $isAdmin && ! $isStudent)
             || $request->is('competition') || $request->is('competition/*')
             || $request->expectsJson()
             || $request->ajax()
@@ -34,16 +37,8 @@ class CompetitionNavigationMiddleware
                 return $response;
             }
 
-            $menuPattern = '/<ul\b(?=[^>]*\bclass\s*=\s*(["\'])[^"\']*\bnavbar-nav\b[^"\']*\1)[^>]*>/i';
-            $updated = preg_replace_callback(
-                $menuPattern,
-                fn (array $match): string => $match[0].$this->linkMarkup(),
-                $html,
-                1,
-                $menuMatches
-            );
-
-            if ($menuMatches !== 1 || ! is_string($updated)) {
+            $menuMatches = 0;
+            if ($isAdmin) {
                 $updated = preg_replace_callback(
                     '/<body\b[^>]*>/i',
                     fn (array $match): string => $match[0].$this->linkMarkup(true),
@@ -51,12 +46,36 @@ class CompetitionNavigationMiddleware
                     1,
                     $bodyMatches
                 );
+
                 if ($bodyMatches !== 1 || ! is_string($updated)) {
                     Log::warning('[Competition] Navigation link was not injected: HTML body was not found.');
 
                     return $response;
                 }
+            } else {
+                $menuPattern = '/<ul\b(?=[^>]*\bclass\s*=\s*(["\'])[^"\']*\bnavbar-nav\b[^"\']*\1)[^>]*>/i';
+                $updated = preg_replace_callback(
+                    $menuPattern,
+                    fn (array $match): string => $match[0].$this->linkMarkup(),
+                    $html,
+                    1,
+                    $menuMatches
+                );
 
+                if ($menuMatches !== 1 || ! is_string($updated)) {
+                    $updated = preg_replace_callback(
+                        '/<body\b[^>]*>/i',
+                        fn (array $match): string => $match[0].$this->linkMarkup(true),
+                        $html,
+                        1,
+                        $bodyMatches
+                    );
+                    if ($bodyMatches !== 1 || ! is_string($updated)) {
+                        Log::warning('[Competition] Navigation link was not injected: HTML body was not found.');
+
+                        return $response;
+                    }
+                }
             }
 
             $response->setContent($updated);
