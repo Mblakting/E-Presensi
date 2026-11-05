@@ -66,7 +66,7 @@ class CompetitionEvaluationTest extends TestCase
             ->assertOk()
             ->assertSee('n = 0')
             ->assertSee('Belum ada percobaan uji manual')
-            ->assertSee('Tidak ada angka FAR, FRR')
+            ->assertSee('Tidak ada angka performa yang dapat dilaporkan')
             ->assertSee('—');
         $this->assertDatabaseHas('competition_audit_logs', [
             'event_type' => 'evaluation_dashboard_accessed',

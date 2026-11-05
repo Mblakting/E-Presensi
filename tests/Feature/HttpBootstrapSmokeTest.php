@@ -93,6 +93,9 @@ class HttpBootstrapSmokeTest extends TestCase
                     $featuresEnabled && $navigationEnabled,
                     $result['has_student_consent_route']
                 );
+                $this->assertFalse($result['consent_text_approved']);
+                $this->assertSame('judge-help@example.test', $result['consent_contact']);
+                $this->assertTrue($result['consent_text_has_contact']);
             }
         } finally {
             foreach ([$absoluteConfigCachePath, $absoluteRouteCachePath] as $cacheFile) {
@@ -122,8 +125,7 @@ class HttpBootstrapSmokeTest extends TestCase
         bool $navigationEnabled,
         ?string $configCachePath,
         ?string $routeCachePath
-    ): array
-    {
+    ): array {
         $enabled = $featuresEnabled ? 'true' : 'false';
 
         $environment = [
@@ -141,6 +143,8 @@ class HttpBootstrapSmokeTest extends TestCase
             'FEATURE_COMPETITION_AUDIT_VIEWER' => $enabled,
             'FEATURE_COMPETITION_DATA_ERASURE' => $enabled,
             'FEATURE_COMPETITION_NAV' => $navigationEnabled ? 'true' : 'false',
+            'COMPETITION_CONSENT_TEXT_APPROVED' => 'false',
+            'COMPETITION_CONSENT_CONTACT' => 'judge-help@example.test',
         ];
         if ($configCachePath !== null) {
             $environment['APP_CONFIG_CACHE'] = $configCachePath;
@@ -164,6 +168,9 @@ class HttpBootstrapSmokeTest extends TestCase
      *     has_competition_guide: bool,
      *     has_student_consent_route: bool,
      *     has_navigation_middleware: bool,
+     *     consent_text_approved: bool,
+     *     consent_contact: string,
+     *     consent_text_has_contact: bool,
      *     web_middleware: list<string>
      * }
      */
@@ -192,6 +199,12 @@ class HttpBootstrapSmokeTest extends TestCase
                     \App\Competition\Http\CompetitionNavigationMiddleware::class,
                     $app['router']->getMiddlewareGroups()['web'] ?? [],
                     true
+                ),
+                'consent_text_approved' => (bool) config('competition.consent.text_approved', false),
+                'consent_contact' => (string) config('competition.consent.contact'),
+                'consent_text_has_contact' => str_contains(
+                    (string) config('competition.consent.text'),
+                    (string) config('competition.consent.contact')
                 ),
             ], JSON_THROW_ON_ERROR);
             PHP;

@@ -11,6 +11,12 @@
     @if (session('warning'))
         <div class="alert alert-warning" role="alert">{{ session('warning') }}</div>
     @endif
+    @if ($consentGateEnabled && ! $textApproved)
+        <div class="alert alert-danger" role="alert">
+            <strong>Presensi wajah diblokir untuk semua siswa.</strong>
+            <p class="mb-0">Teks persetujuan belum disetujui. Silakan gunakan presensi non-wajah; fitur wajah baru dapat dipakai setelah pengelola meninjau dan menyetujui teks.</p>
+        </div>
+    @endif
     @if ($errors->any())
         <div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>
     @endif
@@ -18,7 +24,7 @@
     <section class="card mb-4">
         <div class="card-body">
             <h2 class="card-title">Status akun Anda</h2>
-            <p><span class="badge {{ $consentStatus === 'Persetujuan aktif' ? 'bg-green-lt text-green' : 'bg-yellow-lt text-yellow' }}">{{ $consentStatus }}</span></p>
+            <p><span class="badge {{ $consentStatus === 'Persetujuan aktif' ? 'bg-green-lt text-green' : 'bg-yellow-lt text-dark' }}">{{ $consentStatus }}</span></p>
             <p class="text-secondary mb-0">Versi teks: {{ $version }}. Status ini hanya untuk akun yang sedang masuk.</p>
         </div>
     </section>
@@ -29,7 +35,7 @@
             @if ($textApproved)
                 <div class="alert alert-info"><strong>Teks ditinjau dan disetujui.</strong></div>
             @else
-                <div class="alert alert-warning"><strong>DRAF — belum dapat digunakan.</strong> Admin harus meninjau teks dan mengisi kontak pengelola sebelum persetujuan dapat dicatat.</div>
+                <div class="alert alert-warning"><strong>DRAF — belum dapat digunakan.</strong> Pengelola harus meninjau teks dan mengisi kontak {{ $consentContact }} sebelum persetujuan dapat dicatat.</div>
             @endif
             <div class="competition-break" style="white-space: pre-wrap">{{ $consentText }}</div>
         </div>
@@ -61,4 +67,5 @@
     @endif
     <a class="btn btn-outline-secondary" href="{{ url('/competition') }}">Kembali ke pusat lomba</a>
     <a class="btn btn-outline-primary" href="{{ url('/presensi/face') }}">Kembali ke presensi wajah</a>
+    <a class="btn btn-primary" href="{{ $nonFaceAttendanceUrl }}">Gunakan presensi non-wajah</a>
 @endsection

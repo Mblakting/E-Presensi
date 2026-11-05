@@ -2,7 +2,6 @@
 
 namespace App\Competition\Http;
 
-use App\Competition\Models\ConsentRecord;
 use App\Competition\Models\ManualVerification;
 use App\Competition\Models\VerificationQueueItem;
 use App\Competition\Services\ConsentService;
@@ -20,6 +19,9 @@ class CompetitionNavigationController
             return view('competition::hub.index', [
                 'audience' => 'admin',
                 'featureCards' => $this->adminFeatureCards($consents),
+                'consentGateEnabled' => (bool) config('competition.consent_gate', false),
+                'consentTextApproved' => (bool) config('competition.consent.text_approved', false),
+                'demoFlow' => $this->demoFlow(),
             ]);
         }
 
@@ -38,10 +40,13 @@ class CompetitionNavigationController
             return view('competition::hub.index', [
                 'audience' => 'student',
                 'consentStatus' => $consentStatus,
+                'consentGateEnabled' => (bool) config('competition.consent_gate', false),
+                'consentTextApproved' => (bool) config('competition.consent.text_approved', false),
                 'studentConsentUrl' => Route::has('competition.student-consents.index')
                     ? route('competition.student-consents.index')
                     : null,
                 'faceAttendanceUrl' => Route::has('presensi.face') ? route('presensi.face') : url('/presensi/face'),
+                'demoFlow' => $this->demoFlow(),
             ]);
         }
 
@@ -51,6 +56,21 @@ class CompetitionNavigationController
     public function guide(): View
     {
         return view('competition::hub.guide');
+    }
+
+    /**
+     * @return list<array{label: string, url: ?string, reason: ?string}>
+     */
+    private function demoFlow(): array
+    {
+        return [
+            ['label' => 'Masuk ke aplikasi', 'url' => route('login'), 'reason' => null],
+            ['label' => 'Coba presensi wajah (siswa)', 'url' => Route::has('presensi.face') ? route('presensi.face') : null, 'reason' => 'Rute presensi wajah belum tersedia.'],
+            ['label' => 'Tinjau antrean review (admin)', 'url' => Route::has('competition.reviews.index') ? route('competition.reviews.index') : null, 'reason' => 'Aktifkan FEATURE_TRUST_ENGINE_ENFORCE untuk membuka antrean.'],
+            ['label' => 'Lihat Evaluasi AI (admin)', 'url' => Route::has('competition.evaluation.index') ? route('competition.evaluation.index') : null, 'reason' => 'Aktifkan FEATURE_AI_EVALUATION_DASHBOARD untuk membuka evaluasi.'],
+            ['label' => 'Baca Log audit (admin)', 'url' => Route::has('competition.audit.index') ? route('competition.audit.index') : null, 'reason' => 'Aktifkan FEATURE_COMPETITION_AUDIT_VIEWER untuk membuka log audit.'],
+            ['label' => 'Tinjau Persetujuan (admin)', 'url' => Route::has('competition.consents.index') ? route('competition.consents.index') : null, 'reason' => 'Aktifkan FEATURE_COMPETITION_CONSENT setelah teks ditinjau.'],
+        ];
     }
 
     /**
@@ -139,8 +159,24 @@ class CompetitionNavigationController
             'flag' => $flag,
             'enabled' => $enabled,
             'url' => $enabled && Route::has($routeName) ? route($routeName) : null,
+            'disabled_reason' => $this->disabledReason($flag, $enabled, $routeName),
             'count_label' => $countLabel,
             'count' => $count,
         ];
+    }
+
+    private function disabledReason(string $flag, bool $enabled, string $routeName): string
+    {
+        if (! $enabled) {
+            return $flag === 'FEATURE_COMPETITION_CONSENT'
+                ? 'Aktifkan hanya setelah teks dan proses persetujuan ditinjau.'
+                : "Untuk membuka, atur {$flag}=true pada environment instance kompetisi.";
+        }
+
+        if (! Route::has($routeName)) {
+            return 'Rute belum terdaftar. Periksa konfigurasi dan flag fitur.';
+        }
+
+        return 'Fitur belum tersedia.';
     }
 }

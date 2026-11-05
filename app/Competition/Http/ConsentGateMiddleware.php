@@ -26,15 +26,16 @@ class ConsentGateMiddleware
 
         if (in_array($routeName, ['presensi.face', 'presensi.face.store', 'face.descriptors'], true)) {
             $nisn = (string) Auth::guard('siswa')->id();
-            if ($nisn === '' || ! $this->consents->isGranted($nisn)) {
-                $studentConsentAvailable = config('competition.competition_nav', false)
-                    && Route::has('competition.student-consents.index');
+            $textApproved = (bool) config('competition.consent.text_approved', false);
+            if ($nisn === '' || ! $textApproved || ! $this->consents->isGranted($nisn)) {
+                $studentConsentAvailable = Route::has('competition.student-consents.index');
+                $message = ! $textApproved
+                    ? 'Presensi wajah diblokir karena teks persetujuan belum disetujui. Gunakan presensi non-wajah atau kembali setelah pengelola meninjau teks.'
+                    : 'Persetujuan pemrosesan wajah belum aktif. Baca informasi persetujuan atau gunakan presensi non-wajah.';
 
                 return $this->denied(
                     $request,
-                    $studentConsentAvailable
-                        ? 'Persetujuan pemrosesan wajah belum aktif. Baca informasi persetujuan atau gunakan presensi non-wajah.'
-                        : 'Persetujuan pemrosesan wajah belum aktif. Gunakan presensi non-wajah atau hubungi pengelola.',
+                    $message,
                     $studentConsentAvailable ? route('competition.student-consents.index') : null
                 );
             }

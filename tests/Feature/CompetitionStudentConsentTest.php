@@ -78,6 +78,7 @@ class CompetitionStudentConsentTest extends TestCase
         $this->get(route('competition.student-consents.index'))
             ->assertOk()
             ->assertSee('DRAF — belum dapat digunakan')
+            ->assertSee('Gunakan presensi non-wajah')
             ->assertSee('berusia 18 tahun atau lebih')
             ->assertDontSee('9999000001');
         $this->post(route('competition.student-consents.grant'), [
@@ -135,17 +136,19 @@ class CompetitionStudentConsentTest extends TestCase
             ->assertSessionHas('warning');
     }
 
-    public function test_navigation_off_preserves_existing_consent_gate_fallback(): void
+    public function test_consent_gate_offers_student_consent_page_even_without_competition_navigation(): void
     {
         config(['competition.competition_nav' => false]);
         $student = Siswa::query()->findOrFail('9999000001');
         $this->actingAs($student, 'siswa');
 
         $this->get(route('presensi.face'))
-            ->assertRedirect(route('presensi.create'))
-            ->assertSessionHas(
-                'warning',
-                'Persetujuan pemrosesan wajah belum aktif. Gunakan presensi non-wajah atau hubungi pengelola.'
-            );
+            ->assertRedirect(route('competition.student-consents.index'))
+            ->assertSessionHas('warning', 'Presensi wajah diblokir karena teks persetujuan belum disetujui. Gunakan presensi non-wajah atau kembali setelah pengelola meninjau teks.');
+
+        $this->get(route('competition.student-consents.index'))
+            ->assertOk()
+            ->assertSee('Presensi wajah diblokir untuk semua siswa')
+            ->assertSee('Gunakan presensi non-wajah');
     }
 }

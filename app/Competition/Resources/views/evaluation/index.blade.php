@@ -1,9 +1,13 @@
-@extends('layouts.admin.app')
+@extends('competition::layout')
+
+@section('title', 'Evaluasi AI')
+@section('breadcrumb', 'Evaluasi AI')
 
 @section('content')
-<div class="container-fluid">
-    <h1 class="h3 mb-3">AI Evaluation — Bukti Keandalan dan Privasi</h1>
+<div>
+    <h1 class="h3 mb-3">Evaluasi AI — Bukti Keandalan dan Privasi</h1>
     <p>Data hanya berasal dari challenge dan percobaan manual yang benar-benar tercatat. Halaman ini hanya-baca.</p>
+    <a class="btn btn-outline-secondary mb-3" href="{{ url('/competition') }}">Kembali ke Pusat Lomba</a>
 
     <div class="card mb-4">
         <div class="card-header">Rekaman challenge kompetisi</div>
@@ -52,7 +56,7 @@
         <div class="card-header">Uji manual (n = {{ $trialCount }})</div>
         <div class="card-body">
             @if ($trialCount === 0)
-                <div class="alert alert-info">Belum ada percobaan uji manual yang tercatat. Tidak ada angka FAR, FRR, atau tingkat penolakan serangan yang dapat dilaporkan.</div>
+                <div class="alert alert-info" role="status">Belum ada percobaan uji manual yang tercatat (n=0). Impor hasil pengujian anonim yang benar-benar dilakukan untuk melihat FAR/FRR. Tidak ada angka performa yang dapat dilaporkan saat ini.</div>
             @elseif ($trialCount < $smallSampleThreshold)
                 <div class="alert alert-warning">Sampel kecil ({{ $trialCount }} percobaan; peringatan berlaku di bawah {{ $smallSampleThreshold }}). Angka ini hanya deskriptif dan bukan jaminan keamanan.</div>
             @endif

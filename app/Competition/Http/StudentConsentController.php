@@ -6,7 +6,6 @@ use App\Competition\Services\ConsentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -23,6 +22,9 @@ class StudentConsentController
             'consentText' => (string) config('competition.consent.text'),
             'textApproved' => (bool) config('competition.consent.text_approved', false),
             'version' => (string) config('competition.consent.version'),
+            'consentGateEnabled' => (bool) config('competition.consent_gate', false),
+            'consentContact' => (string) config('competition.consent.contact'),
+            'nonFaceAttendanceUrl' => route('presensi.create'),
             'consentStatus' => match (true) {
                 $latest === null => 'Belum ada persetujuan',
                 $consents->isGranted($nisn) => 'Persetujuan aktif',

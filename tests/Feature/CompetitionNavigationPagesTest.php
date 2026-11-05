@@ -49,7 +49,7 @@ class CompetitionNavigationPagesTest extends TestCase
         $this->get('/competition/guide')
             ->assertOk()
             ->assertSee('Panduan Juri')
-            ->assertSee('bukan verifikasi wajah server-side')
+            ->assertSee('bukan verifikasi server-side')
             ->assertDontSee('9999000001');
         $this->get('/competition')->assertRedirect(route('competition.guide'));
     }
@@ -98,8 +98,8 @@ class CompetitionNavigationPagesTest extends TestCase
         $this->get('/competition')
             ->assertOk()
             ->assertSee('Belum ada persetujuan')
-            ->assertDontSee('9999000001')
-            ->assertDontSee('Nama Privat');
+            ->assertSee('Nama Privat')
+            ->assertDontSee('9999000001');
 
         auth('siswa')->logout();
         $admin = User::query()->create([
@@ -111,9 +111,10 @@ class CompetitionNavigationPagesTest extends TestCase
         $this->get('/competition')
             ->assertOk()
             ->assertSee('Dashboard Evaluasi AI')
-            ->assertSee('Antrean Review')
+            ->assertSee('Antrean review')
             ->assertSee('Log Audit')
             ->assertSee('Persetujuan')
+            ->assertSee('Presensi wajah diblokir untuk semua siswa')
             ->assertDontSee('Nama Privat')
             ->assertDontSee('9999000001');
     }

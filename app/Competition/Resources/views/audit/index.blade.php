@@ -1,9 +1,13 @@
-@extends('layouts.admin.app')
+@extends('competition::layout')
+
+@section('title', 'Log audit')
+@section('breadcrumb', 'Log audit')
 
 @section('content')
-<div class="container-fluid">
-    <h1 class="h3 mb-3">Audit Log Kompetisi</h1>
+<div>
+    <h1 class="h3 mb-3">Log Audit Kompetisi</h1>
     <p>Daftar baca-saja; pembukaan halaman audit juga dicatat. IP dan user-agent tidak ditampilkan.</p>
+    <a class="btn btn-outline-secondary mb-3" href="{{ url('/competition') }}">Kembali ke Pusat Lomba</a>
 
     <div class="card">
         <div class="table-responsive">
@@ -19,7 +23,7 @@
                             <td>{{ $event->is_synthetic ? 'Ya' : 'Tidak' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">Belum ada event audit.</td></tr>
+                        <tr><td colspan="5">Belum ada event audit. Aktivitas kompetisi akan muncul setelah fitur terkait digunakan.</td></tr>
                     @endforelse
                 </tbody>
             </table>

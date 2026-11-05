@@ -1,8 +1,12 @@
-@extends('layouts.admin.app')
+@extends('competition::layout')
+
+@section('title', 'Persetujuan')
+@section('breadcrumb', 'Persetujuan')
 
 @section('content')
-<div class="container-fluid">
+<div>
     <h1 class="h3 mb-3">Persetujuan Pemrosesan Wajah</h1>
+    <a class="btn btn-outline-secondary mb-3" href="{{ url('/competition') }}">Kembali ke Pusat Lomba</a>
 
     @if (session('status'))
         <div class="alert alert-success">{{ session('status') }}</div>
@@ -11,7 +15,10 @@
         <div class="alert alert-warning">{{ session('warning') }}</div>
     @endif
 
-    <div class="alert {{ $textApproved ? 'alert-info' : 'alert-warning' }}">
+    @if ((bool) config('competition.consent_gate', false) && ! $textApproved)
+        <div class="alert alert-danger" role="alert"><strong>Presensi wajah diblokir untuk semua siswa.</strong> Setujui teks (COMPETITION_CONSENT_TEXT_APPROVED=true) atau matikan FEATURE_COMPETITION_CONSENT.</div>
+    @endif
+    <div class="alert {{ $textApproved ? 'alert-info' : 'alert-warning' }}" role="status">
         <strong>{{ $textApproved ? 'Teks disetujui' : 'DRAF — belum boleh digunakan' }}</strong>
         <p class="mb-1">Versi {{ $version }} · SHA-256 {{ $textHash }}</p>
         <pre class="mb-0" style="white-space: pre-wrap">{{ $text }}</pre>
@@ -34,7 +41,10 @@
                         <option value="school_guardian_record">Catatan tertulis sekolah/wali</option>
                     </select>
                 </div>
-                <label><input type="checkbox" name="authority_verified" value="1" required> Saya telah memverifikasi proses persetujuan tertulis yang sesuai.</label>
+                <div class="form-check">
+                    <input class="form-check-input" id="authority-verified" type="checkbox" name="authority_verified" value="1" required>
+                    <label class="form-check-label" for="authority-verified">Saya telah memverifikasi proses persetujuan tertulis yang sesuai.</label>
+                </div>
                 <button class="btn btn-primary" type="submit" {{ $textApproved ? '' : 'disabled' }}>Catat persetujuan</button>
                 @if (! $textApproved)
                     <p class="text-danger mt-2 mb-0">Aksi dinonaktifkan sampai draf ditinjau dan teks disetujui melalui perubahan konfigurasi yang ditinjau.</p>

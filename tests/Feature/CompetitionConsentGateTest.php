@@ -191,13 +191,16 @@ class CompetitionConsentGateTest extends TestCase
 
         $this->actingAs(Siswa::query()->findOrFail('9999000001'), 'siswa');
         $this->postJson(route('presensi.face.store'))->assertForbidden();
-        $this->get(route('presensi.face'))->assertRedirect(route('presensi.create'));
+        $this->get(route('presensi.face'))
+            ->assertRedirect(route('competition.student-consents.index'))
+            ->assertSessionHas('warning');
         $this->getJson(route('face.descriptors'))->assertForbidden();
         $this->assertDatabaseCount('presensi', 0);
     }
 
     public function test_descriptor_endpoint_only_returns_faces_with_current_consent(): void
     {
+        config(['competition.consent.text_approved' => true]);
         app(ConsentService::class)->record('9999000001', 'granted', 'adult_volunteer');
         DB::table('siswa')->where('nisn', '9999000001')->update([
             'face_descriptor' => json_encode(array_fill(0, 128, 0.1)),
@@ -214,6 +217,20 @@ class CompetitionConsentGateTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.nisn', '9999000001');
+    }
+
+    public function test_existing_grant_does_not_open_face_gate_while_text_is_unapproved(): void
+    {
+        config(['competition.consent.text_approved' => true]);
+        app(ConsentService::class)->record('9999000001', 'granted', 'adult_volunteer');
+        config(['competition.consent.text_approved' => false]);
+
+        $this->actingAs(Siswa::query()->findOrFail('9999000001'), 'siswa');
+
+        $this->assertFalse(app(ConsentService::class)->isGranted('9999000001'));
+        $this->get(route('presensi.face'))
+            ->assertRedirect(route('competition.student-consents.index'))
+            ->assertSessionHas('warning');
     }
 
     public function test_bulk_zip_with_unconsented_student_is_rejected_before_extraction(): void

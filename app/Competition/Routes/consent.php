@@ -14,11 +14,9 @@ Route::middleware('web')->group(function (): void {
         Route::post('/withdraw', [ConsentController::class, 'withdraw'])->name('withdraw');
     });
 
-    if (config('competition.competition_nav', false)) {
-        Route::middleware('auth:siswa')->prefix('competition/consent')->name('competition.student-consents.')->group(function (): void {
-            Route::get('/', [StudentConsentController::class, 'index'])->name('index');
-            Route::post('/grant', [StudentConsentController::class, 'grant'])->name('grant');
-            Route::post('/withdraw', [StudentConsentController::class, 'withdraw'])->name('withdraw');
-        });
-    }
+    Route::middleware('auth:siswa')->prefix('competition/consent')->name('competition.student-consents.')->group(function (): void {
+        Route::get('/', [StudentConsentController::class, 'index'])->name('index');
+        Route::post('/grant', [StudentConsentController::class, 'grant'])->name('grant');
+        Route::post('/withdraw', [StudentConsentController::class, 'withdraw'])->name('withdraw');
+    });
 });

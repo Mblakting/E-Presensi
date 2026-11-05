@@ -16,6 +16,10 @@ class ConsentService
 
     public function isGranted(string $nisn): bool
     {
+        if (! (bool) config('competition.consent.text_approved', false)) {
+            return false;
+        }
+
         $latest = $this->latest($nisn);
 
         return $latest?->status === 'granted'
@@ -29,7 +33,7 @@ class ConsentService
      */
     public function grantedNisns(array $nisns): array
     {
-        if ($nisns === []) {
+        if ($nisns === [] || ! (bool) config('competition.consent.text_approved', false)) {
             return [];
         }
 
@@ -52,6 +56,10 @@ class ConsentService
      */
     public function allGrantedNisns(): array
     {
+        if (! (bool) config('competition.consent.text_approved', false)) {
+            return [];
+        }
+
         $latestIds = ConsentRecord::query()
             ->selectRaw('MAX(id)')
             ->groupBy('siswa_nisn');

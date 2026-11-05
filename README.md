@@ -14,7 +14,11 @@ The client's original Laravel starter README is preserved at [docs/README.client
 
 Schools need a practical way to record student arrival/departure and review attendance. The existing application serves students who record attendance and school staff who manage students and review attendance reports. The competition prototype explores additional integrity signals without replacing the client's attendance system.
 
-## Key Features
+## Solution
+
+The prototype adds an optional, feature-flagged trust and review layer around the existing attendance workflows. It provides rule-based signals, a liveness challenge, human review for uncertain attempts, and reports over recorded test evidence. Existing client attendance workflows remain the foundation; competition features are disabled by default.
+
+## Features
 
 - Existing GPS/geofence and photo attendance workflows.
 - Existing browser-based face recognition attendance and student face enrollment.
@@ -29,13 +33,23 @@ Schools need a practical way to record student arrival/departure and review atte
 - Competition-only synthetic student/attendance seeder and trust/liveness-data retention purge commands.
 - Competition flags default to `false`; the competition features are not enabled by default.
 
-The implemented competition feature flags are `FEATURE_TRUST_ENGINE_SHADOW`, `FEATURE_TRUST_ENGINE_ENFORCE`, `FEATURE_COMPETITION_CONSENT`, `FEATURE_AI_EVALUATION_DASHBOARD`, `FEATURE_COMPETITION_AUDIT_VIEWER`, `FEATURE_COMPETITION_DATA_ERASURE`, and `FEATURE_COMPETITION_NAV`. Their defaults and related retention/TTL parameters are listed in [.env.example](.env.example). Anomaly detection is not implemented and has no active flag.
+The implemented competition feature flags are `FEATURE_TRUST_ENGINE_SHADOW`, `FEATURE_TRUST_ENGINE_ENFORCE`, `FEATURE_COMPETITION_CONSENT`, `FEATURE_AI_EVALUATION_DASHBOARD`, `FEATURE_COMPETITION_AUDIT_VIEWER`, `FEATURE_COMPETITION_DATA_ERASURE`, and `FEATURE_COMPETITION_NAV`. All feature flags default to `false`; related retention, consent, judge-account, and optional version values are listed in [.env.example](.env.example). Anomaly detection is not implemented and has no active flag.
 
 ## Panduan Juri
 
 Panduan langkah demi langkah tersedia di [docs/JUDGE_GUIDE.md](docs/JUDGE_GUIDE.md). Jika `FEATURE_COMPETITION_NAV=true`, panduan publik dapat dibuka di `/competition/guide`, sedangkan siswa dan admin yang masuk dapat membuka pusat fitur di `/competition`. Menu “Fitur Lomba” disisipkan oleh middleware pada respons HTML saja; Blade klien tidak diubah. Jika flag mati, menu dan rute panduan/hub tidak aktif.
 
 Untuk demo terpisah, siapkan data sintetis saja (NISN berawalan `9999`) dan atur flag yang diperlukan di environment privat deployment. Flag navigasi tidak mengaktifkan Trust Engine, consent, audit, atau dashboard dengan sendirinya. Consent tetap nonaktif sampai teks draf ditinjau dan disetujui. Jangan aktifkan `FEATURE_TRUST_ENGINE_ENFORCE` sebelum menyiapkan demo terkontrol dan jalur cadangan.
+
+Urutan demo 6 langkah: (1) masuk melalui `/panel` sebagai juri; (2) gunakan akun siswa sintetis dari panitia untuk mencoba `/presensi/face` hanya bila consent dan kamera uji siap; (3) kembali ke `/panel` dan buka `/competition/reviews` untuk antrean human review; (4) buka `/competition/ai-evaluation` untuk melihat hasil uji yang tercatat atau keadaan `n=0`; (5) buka `/competition/audit`; (6) buka `/competition/consents` untuk memeriksa status dan teks persetujuan. Fitur yang belum aktif akan ditandai di pusat lomba.
+
+### Akun juri
+
+Buat atau perbarui akun admin juri pada instance kompetisi terisolasi dengan `COMPETITION_JUDGE_EMAIL` dan `COMPETITION_JUDGE_PASSWORD` (minimal 12 karakter), lalu jalankan `php artisan competition:create-demo-admin`. Password tidak ditampilkan atau ditulis ke log oleh command. Command menolak berjalan jika tabel siswa berisi NISN selain prefix sintetis `9999`; jangan gunakan `--allow-real-data` untuk demo publik. Password juri diberikan panitia melalui form/kanal privat, bukan repository.
+
+### Environment
+
+Flag inti adalah `FEATURE_COMPETITION_NAV`, `FEATURE_TRUST_ENGINE_SHADOW`, `FEATURE_TRUST_ENGINE_ENFORCE`, `FEATURE_COMPETITION_CONSENT`, `FEATURE_AI_EVALUATION_DASHBOARD`, `FEATURE_COMPETITION_AUDIT_VIEWER`, dan `FEATURE_COMPETITION_DATA_ERASURE`; semuanya default `false`. `COMPETITION_CONSENT_TEXT_APPROVED` default `false` dan `COMPETITION_CONSENT_CONTACT` kosong. Jangan setujui teks persetujuan sebelum peninjauan yang semestinya. `COMPETITION_JUDGE_EMAIL` dan `COMPETITION_JUDGE_PASSWORD` hanya diatur pada environment privat; jangan masukkan nilainya ke GitHub, dokumen, atau log.
 
 ## Tech Stack
 
@@ -101,7 +115,7 @@ Do not run `php artisan db:seed` without a class on the competition instance: th
 
 All competition feature flags default to `false`. Enable competition flags only on a separate competition instance, never on client production.
 
-The consent notice must be reviewed and approved before changing its `text_approved` setting. See [the Phase 4 manual guide](docs/PHASE4_MANUAL_TEST.md) for controlled camera trials, CSV import/export, audit checks, and manual purge steps.
+The consent notice must be reviewed and approved before changing `COMPETITION_CONSENT_TEXT_APPROVED`; its default remains `false`. If the gate is enabled while the text is unapproved, face attendance is blocked and students are directed to the non-face attendance route. See [the Phase 4 manual guide](docs/PHASE4_MANUAL_TEST.md) for controlled camera trials, CSV import/export, audit checks, and manual purge steps.
 
 Run tests by suite:
 
@@ -112,15 +126,23 @@ php artisan test --testsuite=Feature
 
 The PHPUnit configuration references `tests/DeployFix`, which is absent from this repository; the unfiltered suite fails because that directory is missing.
 
+## Env
+
+All competition feature flags default to `false`. Set them only in a private, isolated competition environment. `.env.example` contains the complete variable list; consent text approval defaults to `false`, and judge email/password must be configured privately. Do not copy real credentials into repository files or logs.
+
 ## Deployment URL
 
 Not published. No competition deployment URL is configured in this repository.
 
-## Demo Account
+## Demo & Accounts
 
-Synthetic student accounts are created by `CompetitionSyntheticSeeder` with NISN values using the `9999` prefix. Demo passwords are supplied through the private `COMPETITION_DEMO_PASSWORD` environment setting or generated once during seeding. **No password is included in this repository.** Judge credentials will be provided by the organizers through their form.
+Synthetic student accounts are created by `CompetitionSyntheticSeeder` with NISN values using the `9999` prefix. Student demo passwords are configured privately through `COMPETITION_DEMO_PASSWORD` or generated during seeding. The separate juri/admin account is created or updated with `competition:create-demo-admin` from the private `COMPETITION_JUDGE_EMAIL` and `COMPETITION_JUDGE_PASSWORD` environment values. **No password is included in this repository.** Judge credentials will be provided by the organizers through their form.
 
-## Known Limitations
+## Disclosure
+
+The original attendance/authentication, GPS/geofence, photo, and browser-based face recognition workflows are pre-existing client features. Competition additions are feature-flagged and described in [COMPETITION_DISCLOSURE.md](COMPETITION_DISCLOSURE.md). In particular, face distance/`confidence` is still sent by the browser; Phase 3b is a human review queue, not server-side descriptor verification. Only synthetic student data (NISN prefix `9999`) should be used in the public demo.
+
+## Limitations
 
 - Phase 2 shadow scoring and Phase 3a challenge scoring are rule-based; neither is a trained ML model. Phase 2 retains its original 40/40/20 component weights; Phase 3a has a separate configurable 30/25/15/30 decision score.
 - Phase 3a liveness metrics are calculated in the browser, so they add interaction friction and signal consistency only. They do not prevent deepfakes or camera-feed injection and are not cryptographic proof.
@@ -128,6 +150,7 @@ Synthetic student accounts are created by `CompetitionSyntheticSeeder` with NISN
 - If liveness evaluation is unavailable after a valid challenge, a limited daily review fallback can enter the private queue when face and GPS minimum scores pass. The client attendance table is written only after an admin approves the queued attempt.
 - Photo-print/screen behavior requires a manual, consent-based camera test; no anti-spoofing result is claimed until that test is performed.
 - The default consent wording is an unapproved draft with a contact placeholder. It must be reviewed and versioned before use; it does not claim legal compliance. The existing `User` model has no role column, so admin-only competition pages rely on the existing `auth:user` guard and do not add a role system.
+- When `FEATURE_COMPETITION_CONSENT=true` and `COMPETITION_CONSENT_TEXT_APPROVED=false`, face enrollment/attendance is intentionally blocked for all students; use the existing non-face attendance workflow until the consent text is reviewed.
 - The evaluation snapshot currently has no manual trial rows (`n=0`). Metrics will remain unavailable until real, anonymized manual trials are imported; any eventual results are convenience-sample evidence, not a guarantee.
 - Reasons and notes in trial CSVs are free text. The importer checks common identifier patterns and requires tester codes like `T1`, but a human must inspect the snapshot for names or other identifiers before commit.
 - Retention purge is not scheduled automatically. The configured durations are defaults and require an operator to run the dry-run, inspect counts, and invoke purge manually. Manual verification rows of every status (pending, approved, or rejected) and their private snapshots are eligible after the configured 90-day attempt-based retention. If private file deletion fails after the database rows are purged, the command reports failure but the orphaned file requires operator cleanup.

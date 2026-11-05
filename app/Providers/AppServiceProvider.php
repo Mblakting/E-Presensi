@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Competition\Console\Commands\CreateDemoAdmin;
 use App\Competition\Console\Commands\EraseSyntheticCompetitionSubject;
 use App\Competition\Console\Commands\ExportEvaluationSnapshot;
 use App\Competition\Console\Commands\ImportEvaluationTrials;
@@ -62,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->commands([
+            CreateDemoAdmin::class,
             PurgeTrustScores::class,
             PurgeLivenessData::class,
             ImportEvaluationTrials::class,

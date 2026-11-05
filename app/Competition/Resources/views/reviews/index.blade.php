@@ -1,18 +1,28 @@
-@extends('layouts.admin.app')
+@extends('competition::layout')
+
+@section('title', 'Antrean review')
+@section('breadcrumb', 'Antrean review')
 
 @section('content')
-<div class="container-xl">
+<div>
     <div class="page-header d-print-none">
         <div class="row align-items-center">
             <div class="col">
-                <h2 class="page-title">Antrean Verifikasi Presensi</h2>
+                <h1 class="page-title">Antrean Verifikasi Presensi</h1>
                 <div class="text-secondary mt-1">Review challenge lama hanya mengubah catatan kompetisi. Antrean manual baru belum menulis presensi sampai admin menyetujui.</div>
             </div>
         </div>
     </div>
+    <a class="btn btn-outline-secondary mt-3" href="{{ url('/competition') }}">Kembali ke Pusat Lomba</a>
 
     @if (session('status'))
-        <div class="alert alert-success mt-3">{{ session('status') }}</div>
+        <div class="alert alert-success mt-3" role="status">{{ session('status') }}</div>
+    @endif
+    @if (session('warning'))
+        <div class="alert alert-warning mt-3" role="alert">{{ session('warning') }}</div>
+    @endif
+    @if ($errors->any())
+        <div class="alert alert-danger mt-3" role="alert">{{ $errors->first() }}</div>
     @endif
 
     <div class="card mt-3">
@@ -35,7 +45,7 @@
                             <td>{{ $item->created_at }}</td>
                             <td>{{ $item->score }}</td>
                             <td>{{ $item->reason }}</td>
-                            <td>{{ ucfirst($item->status) }}</td>
+                            <td><span class="badge {{ $item->status === 'pending' ? 'bg-yellow-lt text-dark' : ($item->status === 'approved' ? 'bg-green-lt text-green' : 'bg-red-lt text-red') }}">{{ match ($item->status) { 'pending' => 'Menunggu review', 'approved' => 'Disetujui', default => 'Ditolak' } }}</span></td>
                             <td>
                                 @if ($item->status === 'pending')
                                     <form method="POST" action="{{ route('competition.reviews.decide', $item->id) }}" class="d-inline">
@@ -70,8 +80,8 @@
             <table class="table card-table table-vcenter">
                 <thead>
                     <tr>
-                        <th>Nama Siswa</th>
-                        <th>Waktu Coba Absen</th>
+                        <th>Nama siswa</th>
+                        <th>Waktu percobaan</th>
                         <th>Skor Keputusan</th>
                         <th>Alasan</th>
                         <th>Foto Tangkapan</th>
@@ -89,19 +99,21 @@
                             <td>
                                 <a href="{{ route('competition.reviews.manual.snapshot', $manualItem->id) }}" target="_blank" rel="noopener">Lihat foto</a>
                             </td>
-                            <td>{{ ucfirst($manualItem->status) }}</td>
+                            <td><span class="badge {{ $manualItem->status === 'pending' ? 'bg-yellow-lt text-dark' : ($manualItem->status === 'approved' ? 'bg-green-lt text-green' : 'bg-red-lt text-red') }}">{{ match ($manualItem->status) { 'pending' => 'Menunggu review', 'approved' => 'Disetujui', default => 'Ditolak' } }}</span></td>
                             <td>
                                 @if ($manualItem->status === 'pending')
                                     <form method="POST" action="{{ route('competition.reviews.manual.decide', $manualItem->id) }}" class="mb-1">
                                         @csrf
                                         <input type="hidden" name="decision" value="approved">
-                                        <input class="form-control form-control-sm mb-1" name="catatan" maxlength="2000" placeholder="Catatan (opsional)">
+                                        <label class="visually-hidden" for="manual-note-{{ $manualItem->id }}">Catatan keputusan</label>
+                                        <input id="manual-note-{{ $manualItem->id }}" class="form-control form-control-sm mb-1" name="catatan" maxlength="2000" placeholder="Catatan (opsional)">
                                         <button class="btn btn-sm btn-success" type="submit">Terima dan catat presensi</button>
                                     </form>
                                     <form method="POST" action="{{ route('competition.reviews.manual.decide', $manualItem->id) }}">
                                         @csrf
                                         <input type="hidden" name="decision" value="rejected">
-                                        <input class="form-control form-control-sm mb-1" name="catatan" maxlength="2000" placeholder="Alasan penolakan (opsional)">
+                                        <label class="visually-hidden" for="manual-reject-{{ $manualItem->id }}">Alasan penolakan</label>
+                                        <input id="manual-reject-{{ $manualItem->id }}" class="form-control form-control-sm mb-1" name="catatan" maxlength="2000" placeholder="Alasan penolakan (opsional)">
                                         <button class="btn btn-sm btn-danger" type="submit">Tolak</button>
                                     </form>
                                 @else

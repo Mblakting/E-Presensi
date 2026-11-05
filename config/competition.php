@@ -8,9 +8,35 @@
  * Aktifkan HANYA di instance Railway lomba via environment variable.
  * JANGAN set true di .env production klien.
  */
+$consentApproved = filter_var(env('COMPETITION_CONSENT_TEXT_APPROVED', false), FILTER_VALIDATE_BOOLEAN);
+$consentContact = env('COMPETITION_CONSENT_CONTACT') ?: '[isi kontak pengelola sebelum teks ini disetujui]';
+$consentText = str_replace(
+    '[isi kontak pengelola sebelum teks ini disetujui]',
+    $consentContact,
+    <<<'CONSENT'
+DRAF PERSETUJUAN PEMROSESAN WAJAH — versi draft-2
+
+Tujuan: fitur ini menggunakan pengenalan wajah sebagai pilihan untuk pendaftaran wajah dan presensi pada instance demonstrasi E-Presensi.
+
+Data yang diproses: representasi numerik (descriptor) wajah dan foto snapshot saat pendaftaran, foto saat presensi wajah, serta data presensi dan lokasi yang diperlukan oleh alur aplikasi. Jika percobaan presensi ditahan untuk pemeriksaan admin, snapshot JPEG dan lokasi percobaan disimpan pada tabel antrean kompetisi dan snapshot disimpan privat untuk admin. Data biometrik lama disimpan pada tabel siswa milik aplikasi; catatan kompetisi disimpan terpisah.
+
+Retensi: challenge, skor, audit, antrean verifikasi, dan snapshot privat direncanakan disimpan paling lama 90 hari melalui purge manual. Jika admin menyetujui presensi, foto disalin ke penyimpanan foto presensi milik aplikasi klien dan mengikuti prosedur retensi/penghapusan klien; foto tersebut tidak dihapus oleh purge kompetisi. Catatan persetujuan terbaru dipertahankan selama pemrosesan wajah masih mungkin; riwayat yang telah digantikan direncanakan disimpan 365 hari. Descriptor, foto, dan presensi pada tabel aplikasi klien tidak dihapus otomatis oleh penarikan persetujuan.
+
+Penarikan persetujuan: admin dapat mencatat penarikan. Setelah tercatat, aplikasi kompetisi akan menghentikan pendaftaran dan pemrosesan presensi wajah untuk NISN tersebut. Untuk meminta penghapusan descriptor atau foto yang sudah tersimpan pada tabel klien, hubungi pengelola agar mengikuti prosedur penghapusan data klien yang berwenang. Presensi non-wajah tetap dapat digunakan sesuai alur yang tersedia.
+
+Kontak pengelola: [isi kontak pengelola sebelum teks ini disetujui].
+
+Teks ini adalah DRAF untuk ditinjau pengguna dan bukan pernyataan bahwa persyaratan hukum telah dipenuhi. Untuk siswa di bawah umur, persetujuan harus mengikuti proses tertulis sekolah atau wali yang berwenang. Jangan gunakan untuk data nyata sebelum teks dan prosesnya ditinjau serta disetujui.
+CONSENT
+);
+
 return [
-    'demo_password' => env('COMPETITION_DEMO_PASSWORD'),
+    'version' => env('COMPETITION_VERSION'),
+    'commit' => env('COMPETITION_COMMIT'),
     'competition_nav' => env('FEATURE_COMPETITION_NAV', false),
+    'demo_password' => env('COMPETITION_DEMO_PASSWORD'),
+    'judge_email' => env('COMPETITION_JUDGE_EMAIL'),
+    'judge_password' => env('COMPETITION_JUDGE_PASSWORD'),
 
     /*
      * Phase 2: Trust Engine berjalan diam-diam (shadow mode).
@@ -53,22 +79,9 @@ return [
     'consent_gate' => env('FEATURE_COMPETITION_CONSENT', false),
     'consent' => [
         'version' => 'draft-2',
-        'text_approved' => false,
-        'text' => <<<'CONSENT'
-DRAF PERSETUJUAN PEMROSESAN WAJAH — versi draft-2
-
-Tujuan: fitur ini menggunakan pengenalan wajah sebagai pilihan untuk pendaftaran wajah dan presensi pada instance demonstrasi E-Presensi.
-
-Data yang diproses: representasi numerik (descriptor) wajah dan foto snapshot saat pendaftaran, foto saat presensi wajah, serta data presensi dan lokasi yang diperlukan oleh alur aplikasi. Jika percobaan presensi ditahan untuk pemeriksaan admin, snapshot JPEG dan lokasi percobaan disimpan pada tabel antrean kompetisi dan snapshot disimpan privat untuk admin. Data biometrik lama disimpan pada tabel siswa milik aplikasi; catatan kompetisi disimpan terpisah.
-
-Retensi: challenge, skor, audit, antrean verifikasi, dan snapshot privat direncanakan disimpan paling lama 90 hari melalui purge manual. Jika admin menyetujui presensi, foto disalin ke penyimpanan foto presensi milik aplikasi klien dan mengikuti prosedur retensi/penghapusan klien; foto tersebut tidak dihapus oleh purge kompetisi. Catatan persetujuan terbaru dipertahankan selama pemrosesan wajah masih mungkin; riwayat yang telah digantikan direncanakan disimpan 365 hari. Descriptor, foto, dan presensi pada tabel aplikasi klien tidak dihapus otomatis oleh penarikan persetujuan.
-
-Penarikan persetujuan: admin dapat mencatat penarikan. Setelah tercatat, aplikasi kompetisi akan menghentikan pendaftaran dan pemrosesan presensi wajah untuk NISN tersebut. Untuk meminta penghapusan descriptor atau foto yang sudah tersimpan pada tabel klien, hubungi pengelola agar mengikuti prosedur penghapusan data klien yang berwenang. Presensi non-wajah tetap dapat digunakan sesuai alur yang tersedia.
-
-Kontak pengelola: [isi kontak pengelola sebelum teks ini disetujui].
-
-Teks ini adalah DRAF untuk ditinjau pengguna dan bukan pernyataan bahwa persyaratan hukum telah dipenuhi. Untuk siswa di bawah umur, persetujuan harus mengikuti proses tertulis sekolah atau wali yang berwenang. Jangan gunakan untuk data nyata sebelum teks dan prosesnya ditinjau serta disetujui.
-CONSENT,
+        'text_approved' => $consentApproved,
+        'contact' => $consentContact,
+        'text' => $consentText,
     ],
     'retention' => [
         'trust_scores_days' => env('COMPETITION_TRUST_SCORE_RETENTION_DAYS', 90),

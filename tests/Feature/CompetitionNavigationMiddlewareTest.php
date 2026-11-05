@@ -84,6 +84,16 @@ class CompetitionNavigationMiddlewareTest extends TestCase
         $this->assertSame($withoutBody, $response->getContent());
     }
 
+    public function test_competition_pages_do_not_receive_client_navigation_injection(): void
+    {
+        config(['competition.competition_nav' => true]);
+        $html = '<html><body><ul class="navbar-nav"><li>Menu kompetisi</li></ul></body></html>';
+
+        $response = $this->runMiddleware(Request::create('/competition/reviews'), $html);
+
+        $this->assertSame($html, $response->getContent());
+    }
+
     private function runMiddleware(Request $request, string $html): Response
     {
         $response = new Response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);

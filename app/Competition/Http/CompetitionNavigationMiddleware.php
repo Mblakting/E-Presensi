@@ -18,6 +18,7 @@ class CompetitionNavigationMiddleware
         $response = $next($request);
         if (! config('competition.competition_nav', false)
             || (! Auth::guard('user')->check() && ! Auth::guard('siswa')->check())
+            || $request->is('competition') || $request->is('competition/*')
             || $request->expectsJson()
             || $request->ajax()
             || $response->getStatusCode() < 200
@@ -73,7 +74,7 @@ class CompetitionNavigationMiddleware
         $href = htmlspecialchars(url('/competition'), ENT_QUOTES, 'UTF-8');
 
         if ($floating) {
-            return '<a '.self::MARKER.' href="'.$href.'" aria-label="Buka pusat fitur lomba" style="position:fixed;right:1rem;bottom:1rem;z-index:1080;padding:.65rem 1rem;border-radius:.5rem;background:#206bc4;color:#fff;text-decoration:none;box-shadow:0 .25rem .75rem rgba(0,0,0,.2)">Fitur Lomba</a>';
+            return '<a '.self::MARKER.' href="'.$href.'" aria-label="Buka pusat fitur lomba" style="position:fixed;right:1rem;bottom:5rem;z-index:1020;min-height:44px;padding:.65rem 1rem;border-radius:.5rem;background:#1457a6;color:#fff;text-decoration:none;box-shadow:0 .25rem .75rem rgba(0,0,0,.2)">Fitur Lomba</a>';
         }
 
         return '<li class="nav-item" '.self::MARKER.'><a class="nav-link" href="'.$href.'"><span class="nav-link-title">Fitur Lomba</span></a></li>';

@@ -258,6 +258,7 @@ class ManualVerificationQueueTest extends TestCase
     {
         config([
             'competition.consent_gate' => true,
+            'competition.consent.text_approved' => true,
             'competition.consent.version' => 'consent-1',
             'competition.consent.text' => 'Consent test',
         ]);

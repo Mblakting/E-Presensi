@@ -16,16 +16,21 @@
 | **AI Evaluation Dashboard + manual trials** | 🆕 Inovasi lomba | Phase 4b — flag: `FEATURE_AI_EVALUATION_DASHBOARD` |
 | **Competition audit viewer** | 🆕 Inovasi lomba | Phase 4c — flag: `FEATURE_COMPETITION_AUDIT_VIEWER` |
 | **Competition-only synthetic data erasure** | 🆕 Inovasi lomba | Phase 4c — flag: `FEATURE_COMPETITION_DATA_ERASURE` dan consent gate |
-| **Navigasi lomba** | 🆕 Inovasi lomba | Hub dan panduan juri, flag: `FEATURE_COMPETITION_NAV`; tautan disisipkan oleh middleware pada HTML, tanpa mengubah Blade klien |
+| **Navigasi lomba** | 🆕 Inovasi lomba | Hub dan panduan juri, flag: `FEATURE_COMPETITION_NAV`; menu disisipkan oleh middleware pada HTML klien tanpa mengubah Blade klien |
+| **Akun admin demo juri** | 🆕 Inovasi lomba | `competition:create-demo-admin`; menggunakan `COMPETITION_JUDGE_EMAIL` dan `COMPETITION_JUDGE_PASSWORD`, menolak database dengan NISN non-sintetis kecuali opsi berisiko dipilih eksplisit |
 
-## Framework & Library AI
+## Framework, Library, dan AI
 
 | Library | Versi | Lisensi | Peran |
 |---------|-------|---------|-------|
 | face-api.js | 0.22.2 | MIT | Face detection & descriptor extraction (client-side) |
 | Laravel | 12.x | MIT | Backend framework |
+| Tabler | bundled project assets | MIT | UI/CSS dan komponen tampilan |
+| Leaflet | bundled project assets | BSD-2-Clause | Peta pada alur aplikasi yang sudah ada |
 | TinyFaceDetector | — | MIT (bundled face-api) | Deteksi wajah real-time |
 | FaceRecognitionNet | — | MIT (bundled face-api) | Ekstraksi 128-float descriptor |
+
+Alat AI untuk membantu pengembangan: GitHub Copilot (Copilot SDK in VS Code). Tidak ada model AI terlatih/generatif yang menjadi bagian dari runtime fitur kompetisi; scoring dan challenge adalah aturan.
 
 ## Data & Privasi
 
@@ -33,7 +38,7 @@
 - **Data pribadi:** NISN tetap merupakan data pribadi walaupun NISN demo bersifat sintetis. Trust score shadow maupun skor keputusan antrean mengaitkan NISN dengan skor/verdict.
 - **Sinyal lokasi/waktu:** validasi presensi lama tetap menyimpan lokasi sesuai perilaku klien. Trust Engine tidak menyimpan koordinat mentah pada `raw_signals`; ia hanya menyimpan jarak hasil perhitungan dari lokasi sekolah, akurasi GPS, dan selisih waktu hasil perhitungan. Nilai-nilai turunan tersebut tetap dapat menjadi data pribadi ketika dikaitkan dengan NISN.
 - **Challenge/review:** `competition_liveness_challenges` menyimpan NISN, hash nonce, hash sesi, instruksi challenge, status/waktu, dan skor turunan. `competition_manual_verifications` menyimpan skor/verdict, alasan, waktu/jenis presensi, koordinat mentah dari `lokasi`, browser-supplied `confidence`, identitas admin/keputusan, dan path ke snapshot JPEG. Snapshot JPEG disimpan privat untuk review admin; tabel kompetisi tidak menyimpan descriptor wajah atau nonce plaintext. Jika disetujui, snapshot disalin ke penyimpanan foto presensi klien dan baris `presensi` ditulis. Jika ditolak, tabel klien tidak berubah. Audit event keputusan menggunakan tabel audit kompetisi yang juga menyimpan actor/IP/user-agent sesuai skema audit yang sudah ada.
-- **Consent Phase 4a:** `competition_consents` adalah ledger append-only berisi NISN, status grant/withdraw, versi dan hash teks, aktor, dasar verifikasi, serta waktu. Teks default di `config/competition.php` adalah DRAF dengan placeholder kontak dan `text_approved=false`; grant nyata diblokir sampai pengguna meninjau teks, mengisi kontak, menaikkan versi, dan menyetujui konfigurasi. Untuk siswa di bawah umur, proses tertulis sekolah/wali tetap diperlukan. Ini bukan nasihat hukum atau klaim kepatuhan.
+- **Consent Phase 4a:** `competition_consents` adalah ledger append-only berisi NISN, status grant/withdraw, versi dan hash teks, aktor, dasar verifikasi, serta waktu. Teks default di `config/competition.php` adalah DRAF, `COMPETITION_CONSENT_TEXT_APPROVED=false`, dan kontak dapat diisi melalui `COMPETITION_CONSENT_CONTACT`. Grant dan pemrosesan wajah diblokir sampai teks dan proses ditinjau; dokumentasi ini tidak menyetujui teks. Untuk siswa di bawah umur, proses tertulis sekolah/wali tetap diperlukan. Ini bukan nasihat hukum atau klaim kepatuhan.
 - **Trial Phase 4b:** `competition_evaluation_trials` hanya menyimpan jenis uji (`genuine`/`print`/`screen`), hasil, alasan, kode penguji anonim (`T1`, `T2`, ...), tanggal, catatan, dan fingerprint deduplikasi. Tidak ada kolom wajah, descriptor, NISN subjek, atau nama penguji. Import CSV memeriksa pola email, nomor panjang/telepon, dan kode penguji; teks bebas tetap harus diperiksa manusia untuk nama atau identitas lain sebelum ekspor/commit.
 - **AI Evaluation:** dashboard hanya membaca challenge dan trial yang benar-benar tercatat. Review dipisahkan dari denominator; FAR/FRR tidak ditampilkan tanpa denominator. Snapshot di `docs/evaluation/` saat ini header-only dengan `n=0`; belum ada klaim angka performa atau hasil anti-spoofing.
 - **Pencabutan consent:** middleware kompetisi memblokir pendaftaran, penyajian descriptor kepada browser, presensi wajah, dan ekstraksi ZIP bagi siswa tanpa consent aktif. Withdrawal tidak menghapus foto, descriptor, atau presensi dari tabel klien. Purge kompetisi tidak pernah menulis ke tabel klien.
@@ -100,9 +105,13 @@ FEATURE_AI_EVALUATION_DASHBOARD=false
 FEATURE_COMPETITION_AUDIT_VIEWER=false
 FEATURE_COMPETITION_DATA_ERASURE=false
 FEATURE_COMPETITION_NAV=false
+COMPETITION_CONSENT_TEXT_APPROVED=false
+COMPETITION_CONSENT_CONTACT=
+COMPETITION_JUDGE_EMAIL=
+COMPETITION_JUDGE_PASSWORD=
 ```
 
-Parameter lain yang dibaca konfigurasi adalah `COMPETITION_DEMO_PASSWORD`, `COMPETITION_CHALLENGE_TTL_SECONDS`, `COMPETITION_TRUST_SCORE_RETENTION_DAYS`, `COMPETITION_LIVENESS_RETENTION_DAYS`, `COMPETITION_AUDIT_RETENTION_DAYS`, `COMPETITION_CONSENT_HISTORY_RETENTION_DAYS`, dan `COMPETITION_EVALUATION_RETENTION_DAYS`. Nilai contoh dan default-nya tercantum di `.env.example` serta tabel retensi di atas. Dengan semua feature flag `false`, aplikasi berperilaku **identik** dengan versi pesanan klien.
+Parameter lain yang dibaca konfigurasi adalah `COMPETITION_DEMO_PASSWORD`, `COMPETITION_VERSION`, `COMPETITION_COMMIT`, `COMPETITION_CHALLENGE_TTL_SECONDS`, `COMPETITION_TRUST_SCORE_RETENTION_DAYS`, `COMPETITION_LIVENESS_RETENTION_DAYS`, `COMPETITION_AUDIT_RETENTION_DAYS`, `COMPETITION_CONSENT_HISTORY_RETENTION_DAYS`, `COMPETITION_EVALUATION_RETENTION_DAYS`, dan `COMPETITION_MANUAL_VERIFICATION_RETENTION_DAYS`. Nilai contoh dan default-nya tercantum di `.env.example` serta tabel retensi di atas. Dengan semua feature flag `false`, aplikasi berperilaku **identik** dengan versi pesanan klien.
 
 ## Potensi Pengembangan — Belum Diimplementasikan
 
@@ -111,8 +120,8 @@ Parameter lain yang dibaca konfigurasi adalah `COMPETITION_DEMO_PASSWORD`, `COMP
 
 ## AI Coding Assistant
 
-Pengembangan dibantu **GitHub Copilot (Copilot SDK in VS Code)**. Perubahan berbantuan AI ditinjau dan diuji sebelum commit. Trust Engine Phase 2 dan liveness challenge Phase 3a adalah pemrosesan berbasis aturan, bukan model AI terlatih atau generatif. Verifikasi jarak descriptor wajah di server belum diimplementasikan; antrean review manual Phase 3b adalah fitur human-in-the-loop yang terpisah.
+Pengembangan dibantu **GitHub Copilot (Copilot SDK in VS Code)**; tidak ada alat AI lain yang digunakan untuk menghasilkan kode atau materi proyek. Perubahan berbantuan AI ditinjau dan diuji sebelum commit. Trust Engine Phase 2 dan liveness challenge Phase 3a adalah pemrosesan berbasis aturan, bukan model AI terlatih atau generatif. Verifikasi jarak descriptor wajah di server belum diimplementasikan; antrean review manual Phase 3b adalah fitur human-in-the-loop yang terpisah.
 
 ## File Klien Lama yang Dimodifikasi
 
-Dibandingkan branch klien `face-recognition`, file klien lama yang dimodifikasi adalah `.env.example` (flag dan nilai retensi contoh), `bootstrap/app.php` (route/middleware kondisional), `app/Providers/AppServiceProvider.php` (registrasi command kompetisi), dan `README.md` (dokumentasi lomba). Salinan README klien dipertahankan di `docs/README.client.md`. `config/competition.php` adalah file kompetisi baru dari Phase 1 yang diperluas untuk Phase 4, bukan file klien lama. Controller klien, `routes/web.php`, dan Blade klien tidak diubah.
+Dibandingkan branch klien `face-recognition`, perubahan kompetisi dari fase sebelumnya mencakup `.env.example`, `bootstrap/app.php` (registrasi route/middleware kondisional), `app/Providers/AppServiceProvider.php` (registrasi layanan/command kompetisi), dan `README.md` (dokumentasi). Salinan README klien dipertahankan di `docs/README.client.md`. `config/competition.php` adalah konfigurasi baru kompetisi, bukan file klien lama. Perubahan iterasi navigasi/consent/akun demo saat ini, dibandingkan `origin/digifest-2026-mvp`, menyentuh `AppServiceProvider` hanya untuk mendaftarkan command akun demo; tidak mengubah `bootstrap/app.php`, controller klien, `routes/web.php`, Blade klien, `public/index.php`, atau `phpunit.xml`.
